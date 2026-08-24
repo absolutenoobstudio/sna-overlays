@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 760px; height: 510px; overflow: hidden; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; background: transparent; position: relative; }
+
+  .wrap { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 20px 24px; gap: 8px; }
+  #body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 9px; }
+
+  .head { display: flex; align-items: baseline; justify-content: space-between; }
+  .head .t { color: #ffd75e; font-size: 17px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
+  .head .c { color: #9c8a95; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+
+  .fixture { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 4px 0 2px; }
+  .fixture img { width: 70px; height: 70px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+  .fixture .ab { color: #fff; font-size: 30px; font-weight: 800; letter-spacing: 1px; }
+  .mid { display: flex; flex-direction: column; align-items: center; min-width: 128px; }
+  .mid .sc { color: #fff; font-size: 44px; font-weight: 900; line-height: 1; }
+  .mid .sc .win { color: #ffd75e; }
+  .mid .vs { color: #d4af37; font-size: 22px; font-weight: 800; letter-spacing: 2px; }
+  .mid .st { color: #ff5e75; font-size: 13px; font-weight: 800; letter-spacing: 1px; margin-top: 3px; }
+  .mid .st.calm { color: #9c8a95; }
+
+  .cd { text-align: center; color: #ffd75e; font-size: 32px; font-weight: 900; letter-spacing: 1px; }
+  .cd small { display: block; color: #9c8a95; font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 2px; }
+
+  .venue { text-align: center; color: #b9a9b4; font-size: 14px; font-weight: 600; letter-spacing: 1px; }
+
+  .rule { height: 1px; background: rgba(212,175,55,.35); margin: 2px 0; }
+
+  .row { display: flex; align-items: center; justify-content: space-between; }
+  .row .lbl { color: #9c8a95; font-size: 13px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+  .row .val { color: #e8dfd4; font-size: 19px; font-weight: 800; }
+  .row .val b { color: #ffd75e; }
+  .chips { display: inline-flex; gap: 4px; }
+  .chip { width: 23px; height: 23px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 800; }
+  .chip.W { background: #1f9d55; } .chip.D { background: #8a8f98; } .chip.L { background: #d64545; }
+
+  .foot { text-align: center; color: #cfc6ce; font-size: 13px; font-weight: 700; letter-spacing: 1px;
+    border-top: 1px solid rgba(212,175,55,.3); padding-top: 8px;
+  }
+  .foot b { color: #ffd75e; }
+  .foot .a, .foot .b2 { transition: opacity .6s; }
+  .hidden { opacity: 0; position: absolute; left: -9999px; }
+  .empty { color: #9c8a95; font-size: 14px; text-align: center; padding: 16px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head"><span class="t">Match Centre</span><span class="c" id="comp"></span></div>
+    <div id="body"><div class="empty">Loading…</div></div>
+    <div class="foot" id="foot"></div>
+  </div>
+
+<script>
+const TEAM_ID = "359";
+const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
+const $ = (id) => document.getElementById(id);
+const DATES = new URLSearchParams(location.search).get("testdate");
+async function jget(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status);return r.json();}
+let ctx=null, kickoff=null;
+
+async function findMatch(){
+  const found=[];
+  for(const lg of LEAGUES){
+    try{
+      const j=await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard${DATES?"?dates="+DATES:""}`);
+      for(const ev of j.events??[]){
+        const comp=ev.competitions?.[0];
+        if(comp?.competitors?.some(c=>String(c.team?.id)===TEAM_ID)) found.push({lg,leagueName:j.leagues?.[0]?.abbreviation||lg,ev,comp});
+      }
+    }catch(e){}
+  }
+  if(!found.length) return null;
+  const by=s=>found.filter(m=>m.ev.status?.type?.state===s);
+  return by("in")[0] ?? by("pre").sort((a,b)=>new Date(a.ev.date)-new Date(b.ev.date))[0]
+      ?? by("post").sort((a,b)=>new Date(b.ev.date)-new Date(a.ev.date))[0] ?? found[0];
+}
+function statVal(e,n){const s=(e?.stats??[]).find(x=>x.name===n);return s?(s.displayValue??s.value):"–";}
+function chips(f){return `<span class="chips">${(f||"").slice(-5).split("").map(c=>`<span class="chip ${c}">${c}</span>`).join("")}</span>`;}
+
+async function render(){
+  ctx = await findMatch();
+  if(!ctx){ $("body").innerHTML='<div class="empty">No fixture found</div>'; return; }
+  const state=ctx.ev.status?.type?.state;
+  const home=ctx.comp.competitors.find(c=>c.homeAway==="home");
+  const away=ctx.comp.competitors.find(c=>c.homeAway==="away");
+  kickoff=new Date(ctx.ev.date);
+  $("comp").textContent=ctx.leagueName;
+
+  let midHTML;
+  if(state==="pre"){
+    midHTML=`<div class="mid"><span class="vs">VS</span></div>`;
+  }else{
+    const hs=parseInt(home.score??"0",10), as=parseInt(away.score??"0",10);
+    const st=ctx.ev.status;
+    midHTML=`<div class="mid"><span class="sc"><span class="${hs>as?"win":""}">${hs}</span> – <span class="${as>hs?"win":""}">${as}</span></span>
+      <span class="st ${state==="in"?"":"calm"}">${state==="in"?(st.displayClock||"LIVE"):"FULL TIME"}</span></div>`;
+  }
+
+  const venue=ctx.comp.venue?.fullName ?? "";
+  $("body").innerHTML=`
+    <div class="fixture">
+      <img src="${home.team.logo}"><span class="ab">${home.team.abbreviation}</span>
+      ${midHTML}
+      <span class="ab">${away.team.abbreviation}</span><img src="${away.team.logo}">
+    </div>
+    ${state==="pre"?`<div class="cd"><small>Kick-off in</small><span id="cdv">—</span></div>`:""}
+    <div class="venue">${venue?"🏟 "+venue:""}</div>
+    <div class="rule"></div>
+    <div class="row"><span class="lbl">${home.team.abbreviation} form</span>${chips(home.form)}</div>
+    <div class="row"><span class="lbl">${away.team.abbreviation} form</span>${chips(away.form)}</div>
+    <div class="row" id="posrow"><span class="lbl">Arsenal</span><span class="val" id="pos">—</span></div>`;
+
+  try{
+    const lgT=(ctx.lg==="eng.fa"||ctx.lg==="eng.league_cup")?"eng.1":ctx.lg;
+    const j=await jget(`https://site.api.espn.com/apis/v2/sports/soccer/${lgT}/standings`);
+    const entries=j.children?.[0]?.standings?.entries ?? j.standings?.entries ?? [];
+    const ars=entries.find(e=>String(e.team?.id)===TEAM_ID);
+    if(ars && $("pos")) $("pos").innerHTML=`<b>${statVal(ars,"rank")}</b> in the table · <b>${statVal(ars,"points")}</b> pts`;
+  }catch(e){}
+}
+
+function tickCd(){
+  if(!kickoff) return;
+  const el=$("cdv"); if(!el) return;
+  const ms=kickoff-Date.now();
+  if(ms<=0){ el.textContent="KICK-OFF!"; return; }
+  const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4),s=Math.floor(ms%6e4/1e3);
+  el.textContent = d>0 ? `${d}d ${h}h ${m}m` : `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+const FOOT=[
+  'Live on <b>YouTube</b> &amp; <b>TikTok</b> — @SnaFootball',
+  'Playing our game? <b>LAST CARDS</b> — absolutenoobstudio.co.uk',
+  'Drop a <b>follow</b> and let us know your score prediction',
+];
+let fi=0;
+function rotateFoot(){ $("foot").innerHTML=FOOT[fi % FOOT.length]; fi++; }
+
+render(); setInterval(render, 30000);
+setInterval(tickCd, 1000);
+rotateFoot(); setInterval(rotateFoot, 9000);
+</script>
+</body>
+</html>

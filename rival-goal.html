@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  /* GOOD NEWS - the team we are hate-watching has conceded */
+  .flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 45%, rgba(120,230,140,.45), transparent 60%); opacity: 0; }
+  .flash.go { animation: flash 1.5s ease-out; }
+  @keyframes flash { 12% { opacity: 1; } 100% { opacity: 0; } }
+
+  .wrap { position: absolute; inset: 0; display: flex; flex-direction: column;
+          align-items: center; justify-content: center; gap: 12px; opacity: 0; }
+  .wrap.go { animation: pop 7s ease-out; }
+  @keyframes pop {
+    0%   { opacity: 0; transform: scale(.7); }
+    8%   { opacity: 1; transform: scale(1.06); }
+    12%  { transform: scale(1); }
+    86%  { opacity: 1; }
+    100% { opacity: 0; transform: scale(.97); }
+  }
+  .big {
+    font-size: 190px; font-weight: 900; letter-spacing: 6px;
+    background: linear-gradient(180deg, #b6ffc7, #43c46a 60%, #1e8a44);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 10px 40px rgba(30,160,70,.45);
+  }
+  .who { color: #fff; font-size: 46px; font-weight: 800; letter-spacing: 2px;
+         background: rgba(10,30,14,.66); padding: 10px 34px; border-radius: 14px;
+         border: 1px solid rgba(120,230,140,.5); }
+  .sub { color: #cfead6; font-size: 22px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; }
+
+  /* BAD NEWS - they have scored */
+  .glum { position: absolute; left: 0; right: 0; top: 46%;
+          text-align: center; opacity: 0; }
+  .glum.go { animation: glumIn 5.5s ease-out; }
+  @keyframes glumIn {
+    0% { opacity: 0; transform: translateY(18px); }
+    10% { opacity: 1; transform: translateY(0); }
+    86% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .glum .t { display: inline-block; color: #e6dfe4; font-size: 54px; font-weight: 900;
+             letter-spacing: 3px; background: rgba(14,6,8,.82); padding: 16px 44px;
+             border-radius: 14px; border: 1px solid rgba(255,90,96,.5); }
+  .glum .s { display: block; margin-top: 10px; color: #9c8a95; font-size: 20px;
+             font-weight: 800; letter-spacing: 4px; text-transform: uppercase; }
+
+  .confetti { position: absolute; top: -6vh; opacity: 0; border-radius: 2px; }
+  .confetti.go { animation: fall linear forwards; }
+  @keyframes fall {
+    0% { opacity: 1; transform: translateY(0) rotate(0); }
+    100% { opacity: 0; transform: translateY(112vh) rotate(760deg); }
+  }
+</style>
+</head>
+<body>
+  <div class="flash" id="flash"></div>
+  <div class="wrap" id="wrap">
+    <div class="big" id="bigText">GET IN!</div>
+    <div class="who" id="scorer">—</div>
+    <div class="sub" id="subText">they've conceded</div>
+  </div>
+  <div class="glum" id="glum"><span class="t" id="glumText">They've scored…</span><span class="s">unfortunately</span></div>
+
+<script>
+const RIVALS = {
+  "360": "Manchester United", "364": "Liverpool", "363": "Chelsea",
+  "382": "Manchester City",   "367": "Tottenham Hotspur",
+};
+const LEAGUES = ["eng.1", "uefa.champions", "uefa.europa", "eng.fa", "eng.league_cup"];
+const Q = new URLSearchParams(location.search);
+const FORCE_ID = Q.get("id");
+
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+const $ = id => document.getElementById(id);
+const replay = el => { el.classList.remove("go"); void el.offsetWidth; el.classList.add("go"); };
+
+function confettiBurst() {
+  const colors = ["#8ef2a5", "#ffd75e", "#ffffff", "#43c46a"];
+  for (let i = 0; i < 90; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.width = (0.5 + Math.random() * 0.7) + "vw";
+    c.style.height = (0.9 + Math.random() * 1.2) + "vh";
+    c.style.background = colors[i % colors.length];
+    c.style.animationDuration = (2.4 + Math.random() * 2.4) + "s";
+    c.style.animationDelay = (Math.random() * 1.2) + "s";
+    document.body.appendChild(c);
+    c.classList.add("go");
+    setTimeout(() => c.remove(), 7000);
+  }
+}
+
+function pick(found) {
+  if (!found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && now - t(m) < FRESH).sort((a, b) => t(b) - t(a));
+  for (const g of [live, pre, post]) if (g.length) return g[0];
+  return null;
+}
+
+async function findRivalMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        const rival = comp?.competitors?.find(c => {
+          const id = String(c.team?.id);
+          return FORCE_ID ? id === FORCE_ID : RIVALS[id];
+        });
+        if (rival) found.push({ lg, ev, comp, rival });
+      }
+    } catch (e) {}
+  }
+  return pick(found);
+}
+
+// Same trick as the Arsenal alert: ESPN's summary feed lags the scoreboard, so
+// remember which goals we have already reacted to and wait for a genuinely new
+// one rather than naming whoever scored last time.
+const seen = new Set();
+
+async function goalsFor(m, teamId) {
+  const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.lg}/summary?event=${m.ev.id}`);
+  return (j.keyEvents || [])
+    .filter(e => /goal|penalty - scored/i.test(e.type?.text || ""))
+    .filter(e => String(e.team?.id) === String(teamId));
+}
+async function seedSeen(m) {
+  for (const id of [m.rival.team?.id, m.comp.competitors.find(c => c !== m.rival)?.team?.id]) {
+    try { for (const g of await goalsFor(m, id)) seen.add(String(g.id)); } catch (e) {}
+  }
+}
+async function newScorer(m, teamId, tries = 10) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      const fresh = (await goalsFor(m, teamId)).filter(g => !seen.has(String(g.id)));
+      if (fresh.length) {
+        const g = fresh[fresh.length - 1];
+        seen.add(String(g.id));
+        const who = g.participants?.[0]?.athlete?.displayName || "";
+        const clock = g.clock?.displayValue || "";
+        return who ? `${who}  ${clock}` : clock;
+      }
+    } catch (e) {}
+    await new Promise(r => setTimeout(r, 3000));
+  }
+  return "";
+}
+
+async function goodNews(m, foe) {
+  replay($("flash")); replay($("wrap")); confettiBurst();
+  $("bigText").textContent = "GET IN!";
+  $("subText").textContent = `${m.rival.team?.shortDisplayName || "They"} have conceded`;
+  $("scorer").textContent = foe.team?.shortDisplayName || "";
+  const s = await newScorer(m, foe.team?.id);
+  if (s) $("scorer").textContent = s;
+}
+
+function badNews(m) {
+  $("glumText").textContent = `${m.rival.team?.shortDisplayName || "They"} have scored…`;
+  replay($("glum"));
+}
+
+let ref = null, rScore = null, fScore = null, first = true;
+
+async function tick() {
+  try {
+    ref = await findRivalMatch();
+    if (ref) {
+      const foe = ref.comp.competitors.find(c => c !== ref.rival);
+      const rs = parseInt(ref.rival.score ?? "0", 10);
+      const fs = parseInt(foe.score ?? "0", 10);
+      if (!first && fScore !== null && fs > fScore) goodNews(ref, foe);   // they conceded
+      if (!first && rScore !== null && rs > rScore) badNews(ref);          // they scored
+      if (first) await seedSeen(ref);
+      rScore = rs; fScore = fs; first = false;
+    }
+  } catch (e) {}
+  const live = ref?.ev?.status?.type?.state === "in";
+  setTimeout(tick, live ? 12000 : 60000);
+}
+tick();
+
+// ?test replays the celebration every 10s so you can see it
+if (location.search.includes("test")) {
+  const demo = () => {
+    $("bigText").textContent = "GET IN!";
+    $("subText").textContent = "They've conceded";
+    $("scorer").textContent = "Someone  67'";
+    replay($("flash")); replay($("wrap")); confettiBurst();
+  };
+  demo(); setInterval(demo, 10000);
+}
+</script>
+</body>
+</html>

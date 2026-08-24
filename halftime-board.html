@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; }
+  body {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    background: transparent;
+    position: relative;
+  }
+  /* background on a real element: a <body> background propagates to the root
+     canvas, which OBS renders transparent */
+  .bgfill {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(1000px 700px at 12% 8%, rgba(239,1,7,.16), transparent 60%),
+      radial-gradient(900px 700px at 90% 92%, rgba(212,175,55,.10), transparent 60%),
+      #120508;
+  }
+  .texture {
+    position: absolute; inset: 0; z-index: 1;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,.014) 0 2px, transparent 2px 14px);
+  }
+  .ht-title {
+    position: absolute; top: 78px; left: 60px;
+    color: #ffd75e; font-size: 44px; font-weight: 900; letter-spacing: 8px;
+  }
+  .ht-sub { position: absolute; top: 136px; left: 62px; color: #9c8a95; font-size: 16px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; }
+
+  /* left slot frame for the video ad */
+  .ad-slot {
+    position: absolute; left: 50px; top: 180px; width: 520px; height: 700px;
+    border: 1px solid rgba(212,175,55,.4); border-radius: 22px;
+    background: rgba(0,0,0,.35);
+  }
+  .ad-cap {
+    position: absolute; left: 50px; top: 892px; width: 520px; text-align: center;
+    color: #9c8a95; font-size: 15px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  }
+
+  /* right rotating zone */
+  .zone {
+    position: absolute; left: 620px; top: 250px; width: 1250px; height: 620px;
+  }
+  .page {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(20,6,10,.85), rgba(10,4,6,.85));
+    border: 1px solid rgba(212,175,55,.45);
+    border-radius: 20px;
+    padding: 26px 34px;
+    opacity: 0; transform: translateX(40px);
+    transition: opacity .6s, transform .6s;
+    pointer-events: none;
+    display: flex; flex-direction: column;
+  }
+  .page.on { opacity: 1; transform: translateX(0); }
+  .ptitle { color: #ffd75e; font-size: 24px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: baseline; }
+  .ptitle small { color: #9c8a95; font-size: 13px; letter-spacing: 2px; }
+
+  /* h2h page */
+  .h2h { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .h2h-teams { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .h2h-team { display: flex; align-items: center; gap: 14px; }
+  .h2h-team img { width: 64px; height: 64px; object-fit: contain; }
+  .h2h-team .nm { color: #fff; font-size: 30px; font-weight: 800; }
+  .statrow { display: flex; align-items: center; gap: 16px; padding: 7px 0; border-top: 1px solid rgba(255,255,255,.07); }
+  .statrow .v { color: #fff; font-size: 24px; font-weight: 800; width: 130px; }
+  .statrow .v.right { text-align: right; }
+  .statrow .lbl { flex: 1; text-align: center; color: #9c8a95; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  .statrow .better { color: #ffd75e; }
+  .formchips { display: inline-flex; gap: 4px; }
+  .chip { width: 24px; height: 24px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 800; }
+  .chip.W { background: #1f9d55; } .chip.D { background: #8a8f98; } .chip.L { background: #d64545; }
+
+  /* table page */
+  .tbl { flex: 1; display: grid; grid-template-columns: 1fr 1fr; column-gap: 40px; align-content: start; }
+  .trow {
+    display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px;
+  }
+  .trow.hl { background: rgba(239,1,7,.22); border: 1px solid rgba(239,1,7,.5); }
+  .trow.hl2 { background: rgba(77,159,255,.14); border: 1px solid rgba(77,159,255,.4); }
+  .trow .rk { width: 30px; color: #9c8a95; font-size: 17px; font-weight: 800; text-align: right; }
+  .trow img { width: 26px; height: 26px; object-fit: contain; }
+  .trow .mv { width: 14px; font-size: 12px; font-weight: 900; text-align: center; }
+  .trow .mv.up { color: #8ef2a5; } .trow .mv.down { color: #ff7b80; }
+  .trow .ldot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+                background: #ff3b3b; margin-left: 7px; animation: htblink 1.3s infinite; }
+  @keyframes htblink { 50% { opacity: .25; } }
+  .trow .tn { flex: 1; color: #e8dfd4; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trow .num { width: 36px; text-align: right; color: #9c8a95; font-size: 16px; font-weight: 700; }
+  .trow .pts { width: 44px; text-align: right; color: #ffd75e; font-size: 18px; font-weight: 900; }
+  .thead { display: flex; gap: 10px; padding: 0 10px 6px; color: #6f6270; font-size: 12px; font-weight: 800; letter-spacing: 1px; }
+  .thead .rk { width: 30px; text-align: right; } .thead .mv { width: 14px; } .thead .sp { width: 26px; } .thead .tn { flex: 1; } .thead .num { width: 36px; text-align: right; } .thead .pts { width: 44px; text-align: right; }
+
+  /* scores page */
+  .srows { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
+  .srow { display: flex; align-items: center; gap: 12px; padding: 10px 8px; border-top: 1px solid rgba(255,255,255,.06); }
+  .srow img { width: 32px; height: 32px; object-fit: contain; }
+  .srow .name { color: #e8dfd4; font-size: 20px; font-weight: 700; width: 64px; }
+  .srow .name.away { text-align: right; }
+  .srow .mid { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .srow .sc { color: #fff; font-size: 24px; font-weight: 800; min-width: 26px; text-align: center; }
+  .srow .dash { color: #d4af37; font-weight: 700; }
+  .srow .st { width: 70px; text-align: right; color: #9c8a95; font-size: 14px; font-weight: 700; }
+  .srow .st.live { color: #ff5e75; }
+  .srow .st.ht { color: #ffd75e; }
+  /* a goal just went in somewhere else */
+  .srow.goal { animation: htgoal 2.6s ease-out 1; }
+  @keyframes htgoal { 0% { background: rgba(120,230,140,.50); } 18% { background: rgba(120,230,140,.36); } 100% { background: transparent; } }
+  .srow.goal .sc { animation: htgoalpop 2.6s ease-out 1; }
+  @keyframes htgoalpop { 0%, 12% { color: #8ef2a5; transform: scale(1.25); } 100% { color: #fff; transform: scale(1); } }
+  .empty { color: #9c8a95; font-size: 18px; font-weight: 600; text-align: center; padding: 40px; }
+
+  .dots { position: absolute; bottom: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; }
+  .dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.25); transition: background .3s, transform .3s; }
+  .dots span.on { background: #ffd75e; transform: scale(1.25); }
+</style>
+</head>
+<body>
+  <div class="bgfill"></div>
+  <div class="texture"></div>
+  <div class="ht-title" id="boardTitle">HALF-TIME</div>
+  <div class="ht-sub" id="subtitle">Match analysis</div>
+  <div class="ad-slot" id="adSlot"></div>
+  <div class="ad-cap" id="adCap">Download Last Cards &mdash; link &amp; QR on screen</div>
+
+  <script>
+  // ?analysis - the left column holds the cameras instead of the video ad
+  if (location.search.includes("analysis")) {
+    document.getElementById("adSlot").style.display = "none";
+    document.getElementById("adCap").style.display = "none";
+    document.getElementById("boardTitle").textContent = "ANALYSIS";
+    document.getElementById("subtitle").textContent = "Stats breakdown";
+  }
+  </script>
+
+  <div class="zone">
+    <div class="page" id="p0">
+      <div class="ptitle">Season Head-to-Head <small id="h2hLeague"></small></div>
+      <div class="h2h" id="h2h"><div class="empty">Loading…</div></div>
+    </div>
+    <div class="page" id="p1">
+      <div class="ptitle">League Table <small id="tblSub">Live standings</small></div>
+      <div class="tbl" id="tbl"><div class="empty">Loading…</div></div>
+    </div>
+    <div class="page" id="p2">
+      <div class="ptitle">Around the League <small id="scLeague"></small></div>
+      <div class="srows" id="srows"><div class="empty">Loading…</div></div>
+    </div>
+    <div class="dots"><span id="d0" class="on"></span><span id="d1"></span><span id="d2"></span></div>
+  </div>
+
+<script src="live-core.js"></script>
+<script>
+const TEAM_ID = "359";
+const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
+const PAGE_SECONDS = 14;
+const $ = (id) => document.getElementById(id);
+
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+let ctx = null; // { lg, leagueName, ev, arsenal, opp }
+
+// Which Arsenal fixture should this overlay follow?
+// ESPN keeps old finished matches on the cup and European scoreboards long after
+// they are done, so anything that ended more than 36 hours ago is ignored - that
+// is what stops last season's result reappearing on stream. mode "finished"
+// wants the match just played, "current" wants the one being played or next up.
+// keepOld is set when a ?testdate= is in the URL, so testing with a past match
+// still works.
+function pickMatch(found, mode, keepOld) {
+  if (!found || !found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t  = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre  = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && (keepOld || now - t(m) < FRESH))
+                    .sort((a, b) => t(b) - t(a));
+  for (const g of (mode === "finished" ? [post, live, pre] : [live, pre, post]))
+    if (g.length) return g[0];
+  return null;
+}
+
+async function findMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        if (comp?.competitors?.some(c => String(c.team?.id) === TEAM_ID)) {
+          found.push({ lg, leagueName: j.leagues?.[0]?.abbreviation || lg, ev, comp, data: j });
+        }
+      }
+    } catch (e) {}
+  }
+  const m = pickMatch(found, "current", false);
+  if (!m) return null;
+  const ars = m.comp.competitors.find(c => String(c.team?.id) === TEAM_ID);
+  const opp = m.comp.competitors.find(c => String(c.team?.id) !== TEAM_ID);
+  return { ...m, ars, opp };
+}
+
+function statVal(entry, name) {
+  const s = (entry?.stats ?? []).find(x => x.name === name);
+  return s ? (s.displayValue ?? s.value) : "–";
+}
+
+async function getStandings(lg) {
+  const j = await jget(`https://site.api.espn.com/apis/v2/sports/soccer/${lg}/standings`);
+  let entries = j.children?.[0]?.standings?.entries ?? j.standings?.entries ?? [];
+  return entries.slice().sort((a, b) => (parseInt(statVal(a, "rank")) || 99) - (parseInt(statVal(b, "rank")) || 99));
+}
+
+
+let anyLive = false;               // drives how hard we poll
+
+/* The live league table now lives in live-core.js, shared with live-table.html
+   and the other board. If that file is ever missing we degrade to the plain
+   official table rather than break the board on stream. */
+async function tableRows(lg) {
+  if (window.LiveCore) return window.LiveCore.liveStandings(lg);
+  const entries = await getStandings(lg);
+  const n = (e, k) => {
+    const s = (e.stats ?? []).find(x => x.name === k);
+    const v = parseInt(s?.displayValue ?? s?.value ?? "0", 10);
+    return isFinite(v) ? v : 0;
+  };
+  const rows = entries.map((e, i) => {
+    const t = e.team ?? {};
+    const gf = n(e, "pointsFor"), ga = n(e, "pointsAgainst");
+    return {
+      id: String(t.id), name: t.shortDisplayName ?? t.displayName ?? "",
+      logo: t.logos?.[0]?.href ?? "", pl: n(e, "gamesPlayed"),
+      gf, ga, gd: gf - ga, pts: n(e, "points"), rank: n(e, "rank"),
+      playing: false, pos: i + 1, shift: 0,
+    };
+  });
+  return { rows, inPlay: 0, degraded: true };
+}
+
+function chips(form) {
+  return `<span class="formchips">${(form || "").slice(-5).split("").map(c => `<span class="chip ${c}">${c}</span>`).join("")}</span>`;
+}
+
+function h2hRow(label, av, ov, higherBetter = true) {
+  const an = parseFloat(av), on = parseFloat(ov);
+  let aCls = "", oCls = "";
+  if (!isNaN(an) && !isNaN(on) && an !== on) {
+    const aWins = higherBetter ? an > on : an < on;
+    aCls = aWins ? "better" : ""; oCls = aWins ? "" : "better";
+  }
+  return `<div class="statrow"><span class="v ${aCls}">${av}</span><span class="lbl">${label}</span><span class="v right ${oCls}">${ov}</span></div>`;
+}
+
+async function renderH2H() {
+  if (!ctx) return;
+  $("h2hLeague").textContent = ctx.leagueName;
+  try {
+    const entries = await getStandings(ctx.lg === "eng.fa" || ctx.lg === "eng.league_cup" ? "eng.1" : ctx.lg);
+    const eA = entries.find(e => String(e.team?.id) === String(ctx.ars.team.id));
+    const eO = entries.find(e => String(e.team?.id) === String(ctx.opp.team.id));
+    $("h2h").innerHTML = `
+      <div class="h2h-teams">
+        <div class="h2h-team"><img src="${ctx.ars.team.logo}"><span class="nm">${ctx.ars.team.shortDisplayName}</span></div>
+        <div class="h2h-team"><span class="nm">${ctx.opp.team.shortDisplayName}</span><img src="${ctx.opp.team.logo}"></div>
+      </div>
+      ${h2hRow(statVal(eA, "rank"), "League position", statVal(eO, "rank"), false)}
+      ${h2hRow(statVal(eA, "points"), "Points", statVal(eO, "points"))}
+      ${h2hRow(`${statVal(eA, "wins")}-${statVal(eA, "ties")}-${statVal(eA, "losses")}`, "W - D - L", `${statVal(eO, "wins")}-${statVal(eO, "ties")}-${statVal(eO, "losses")}`)}
+      ${h2hRow(statVal(eA, "pointsFor"), "Goals scored", statVal(eO, "pointsFor"))}
+      ${h2hRow(statVal(eA, "pointsAgainst"), "Goals conceded", statVal(eO, "pointsAgainst"), false)}
+      <div class="statrow"><span class="v">${""}</span></div>
+      <div class="h2h-teams" style="margin-top:2px">${chips(ctx.ars.form)}<span style="color:#9c8a95;font-size:14px;font-weight:700;letter-spacing:2px">RECENT FORM</span>${chips(ctx.opp.form)}</div>`;
+  } catch (e) {
+    $("h2h").innerHTML = `<div class="empty">Season stats unavailable</div>`;
+  }
+}
+
+async function renderTable() {
+  if (!ctx) return;
+  try {
+    const lgForTable = (ctx.lg === "eng.fa" || ctx.lg === "eng.league_cup") ? "eng.1" : ctx.lg;
+    const { rows, inPlay } = await tableRows(lgForTable);
+    if (inPlay) anyLive = true;
+    if (!rows.length) { $("tbl").innerHTML = `<div class="empty">Table unavailable</div>`; return; }
+    const sub = $("tblSub");
+    if (sub) sub.textContent = inPlay ? `Live · ${inPlay} in play` : "Standings";
+    const half = Math.ceil(Math.min(rows.length, 20) / 2);
+    const head = `<div class="thead"><span class="rk">#</span><span class="mv"></span><span class="sp"></span><span class="tn">Team</span><span class="num">P</span><span class="num">GD</span><span class="pts">Pts</span></div>`;
+    const col = (list) => head + list.map(t => {
+      const hl = t.id === String(ctx.ars.team.id) ? "hl" : t.id === String(ctx.opp.team.id) ? "hl2" : "";
+      const gd = t.gd;
+      const mv = t.shift > 0 ? `<span class="mv up">▲</span>`
+               : t.shift < 0 ? `<span class="mv down">▼</span>`
+               : `<span class="mv"></span>`;
+      return `<div class="trow ${hl}">
+        <span class="rk">${t.pos}</span>${mv}
+        <img src="${t.logo}">
+        <span class="tn">${t.name}${t.playing ? `<i class="ldot"></i>` : ""}</span>
+        <span class="num">${t.pl}</span>
+        <span class="num">${gd > 0 ? "+" + gd : gd}</span>
+        <span class="pts">${t.pts}</span>
+      </div>`;
+    }).join("");
+    $("tbl").innerHTML = `<div>${col(rows.slice(0, half))}</div><div>${col(rows.slice(half, 20))}</div>`;
+  } catch (e) {
+    $("tbl").innerHTML = `<div class="empty">Table unavailable</div>`;
+  }
+}
+
+function statusLabel(ev) {
+  const st = ev.status, t = st?.type, state = t?.state;
+  if (state === "in") {
+    // half-time is reported as a live state with the clock stopped on 45'
+    if (/half/i.test(t?.description || "") || /half/i.test(t?.shortDetail || ""))
+      return { text: "HT", live: true, ht: true };
+    return { text: st.displayClock || "LIVE", live: true };
+  }
+  if (state === "post") return { text: "FT", live: false };
+  return { text: new Date(ev.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), live: false };
+}
+
+/* Polling tells you the score, never that it just CHANGED - so remember it and
+   flash the row when a goal goes in. */
+const lastScoreHT = new Map();
+const flashHT = new Set();
+
+async function renderScores() {
+  if (!ctx) return;
+  $("scLeague").textContent = ctx.leagueName;
+  const others = (ctx.data.events ?? []).filter(ev => ev.id !== ctx.ev.id);
+  // live games first - they were previously left in fixture order and could be
+  // pushed off the bottom of the list by finished ones
+  const rank = ev => ev.status?.type?.state === "in" ? 0 : ev.status?.type?.state === "pre" ? 1 : 2;
+  others.sort((a, b) => rank(a) - rank(b) || new Date(a.date) - new Date(b.date));
+  if (others.some(ev => rank(ev) === 0)) anyLive = true;
+
+  $("srows").innerHTML = others.length ? others.slice(0, 8).map(ev => {
+    const comp = ev.competitions[0];
+    const h = comp.competitors.find(c => c.homeAway === "home");
+    const a = comp.competitors.find(c => c.homeAway === "away");
+    const st = statusLabel(ev);
+    const started = ev.status?.type?.state !== "pre";
+
+    let goal = false;
+    if (started) {
+      const pair = `${h.score}-${a.score}`;
+      const prev = lastScoreHT.get(ev.id);
+      if (prev !== undefined && prev !== pair) flashHT.add(ev.id);
+      lastScoreHT.set(ev.id, pair);
+      goal = flashHT.has(ev.id);
+    }
+    return `<div class="srow ${goal ? "goal" : ""}">
+      <img src="${h.team.logo || ""}"><span class="name">${h.team.abbreviation}</span>
+      <span class="mid"><span class="sc">${started ? h.score : ""}</span><span class="dash">${started ? "–" : "v"}</span><span class="sc">${started ? a.score : ""}</span></span>
+      <span class="name away">${a.team.abbreviation}</span><img src="${a.team.logo || ""}">
+      <span class="st ${st.live ? (st.ht ? "ht" : "live") : ""}">${st.text}</span>
+    </div>`;
+  }).join("") : `<div class="empty">No other fixtures in this round today</div>`;
+
+  if (flashHT.size) setTimeout(() => flashHT.clear(), 2600);
+}
+
+let page = 0;
+function showPage(i) {
+  for (let k = 0; k < 3; k++) {
+    $("p" + k).classList.toggle("on", k === i);
+    $("d" + k).classList.toggle("on", k === i);
+  }
+}
+
+async function refreshData() {
+  try {
+    anyLive = false;
+    ctx = await findMatch();
+    await Promise.all([renderH2H(), renderTable(), renderScores()]);
+  } catch (e) {}
+}
+
+(async () => {
+  await refreshData();
+  showPage(0);
+  setInterval(() => { page = (page + 1) % 3; showPage(page); }, PAGE_SECONDS * 1000);
+  // poll harder while something is actually being played
+  (function loop() {
+    setTimeout(async () => { await refreshData(); loop(); }, anyLive ? 20000 : 60000);
+  })();
+})();
+</script>
+</body>
+</html>

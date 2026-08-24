@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; }
+  body {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    background-color: #0b0e1a;
+  }
+  .bg {
+    position: absolute; inset: -20%;
+    background:
+      radial-gradient(900px 700px at 15% 10%, rgba(124, 92, 255, .35), transparent 65%),
+      radial-gradient(800px 650px at 85% 85%, rgba(34, 211, 238, .28), transparent 65%),
+      radial-gradient(600px 500px at 45% 95%, rgba(255, 77, 141, .16), transparent 65%),
+      #0b0e1a;
+    animation: sway 20s ease-in-out infinite alternate;
+  }
+  @keyframes sway {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(-60px, 40px) scale(1.06); }
+  }
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,.5) 100%);
+  }
+  .stack { position: relative; text-align: center; z-index: 2; }
+  .eyebrow {
+    color: #8f98b8; letter-spacing: 14px; font-size: 30px; font-weight: 600;
+    text-transform: uppercase; margin-bottom: 28px;
+  }
+  h1 {
+    font-size: 150px; font-weight: 800; letter-spacing: 6px; text-transform: uppercase;
+    background: linear-gradient(90deg, #22d3ee, #7c5cff, #ff4d8d, #22d3ee);
+    background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: shimmer 6s linear infinite;
+  }
+  @keyframes shimmer { to { background-position: 300% 0; } }
+  .dots { margin-top: 46px; display: flex; gap: 22px; justify-content: center; }
+  .dots span {
+    width: 18px; height: 18px; border-radius: 50%; background: #e6e9f8; opacity: .25;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .dots span:nth-child(2) { animation-delay: .2s; }
+  .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes pulse { 50% { opacity: 1; transform: scale(1.25); } }
+  .handle {
+    position: absolute; bottom: 70px; left: 0; right: 0; text-align: center;
+    color: #c7cdea; font-size: 34px; font-weight: 600; letter-spacing: 3px; z-index: 2;
+  }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="vignette"></div>
+  <div class="stack">
+    <div class="eyebrow">Going Live</div>
+    <h1>Starting Soon</h1>
+    <div class="dots"><span></span><span></span><span></span></div>
+  </div>
+  <div class="handle">@AbsoluteNoob</div>
+</body>
+</html>

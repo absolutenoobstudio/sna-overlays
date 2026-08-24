@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; display: flex; align-items: center; justify-content: flex-end; }
+
+  .card {
+    display: flex; align-items: center; gap: 18px;
+    background: linear-gradient(135deg, rgba(10,8,22,.95), rgba(24,10,40,.95));
+    border: 1px solid rgba(0,229,255,.55);
+    box-shadow: 0 0 24px rgba(0,229,255,.25), 0 8px 28px rgba(0,0,0,.6);
+    border-radius: 18px;
+    padding: 16px 20px;
+    margin-right: 6px;
+    transform: translateX(110%);
+    max-width: 96vw;
+  }
+  .card.in {
+    animation: slidein .7s cubic-bezier(.2,1,.3,1) forwards,
+               glowpulse 5s ease-in-out 1s infinite;
+  }
+  .card.out { animation: slideout .6s cubic-bezier(.6,0,.8,.4) forwards; }
+  @keyframes slidein { to { transform: translateX(0); } }
+  @keyframes slideout { from { transform: translateX(0); } to { transform: translateX(115%); } }
+
+  /* Ambient motion for the always-on version. The card now sits there for the
+     whole match, so it needs to look alive without pulling the eye off the
+     football - a slow light sweep plus a breathing glow, nothing fast. */
+  .card { position: relative; overflow: hidden; }
+  .card::after {
+    content: ""; position: absolute; top: -60%; left: 0;
+    width: 90px; height: 220%; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.13), transparent);
+    transform: rotate(18deg) translateX(-160px);
+    animation: sheen 8s ease-in-out infinite;
+  }
+  @keyframes sheen {
+    0%, 55% { transform: rotate(18deg) translateX(-160px); }
+    100%    { transform: rotate(18deg) translateX(760px); }
+  }
+  @keyframes glowpulse {
+    0%, 100% { box-shadow: 0 0 24px rgba(0,229,255,.25), 0 8px 28px rgba(0,0,0,.6); }
+    50%      { box-shadow: 0 0 40px rgba(0,229,255,.48), 0 8px 28px rgba(0,0,0,.6); }
+  }
+
+  /* the real App Store icon. It ships as an opaque 1024px square, so the
+     rounded corners and the glow are done here rather than in the file. */
+  .icon { flex: none; width: 104px; height: 104px; }
+  .icon img {
+    width: 100%; height: 100%; display: block; object-fit: cover;
+    border-radius: 23px;                    /* iOS icon corner proportion */
+    border: 1px solid rgba(0,229,255,.45);
+    box-shadow: 0 0 16px rgba(0,229,255,.30), 0 4px 14px rgba(0,0,0,.6);
+    animation: floaty 2.6s ease-in-out infinite;
+  }
+  @keyframes floaty { 50% { transform: translateY(-5px); } }
+
+  .text { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .title {
+    font-size: 30px; font-weight: 900; letter-spacing: 2px; line-height: 1;
+    background: linear-gradient(90deg, #00e5ff, #ffd75e, #00e5ff);
+    background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    white-space: nowrap;
+    animation: titledrift 7s ease-in-out infinite;
+  }
+  @keyframes titledrift { 50% { background-position: 100% 0; } }
+  .tag { color: #cfd6ff; font-size: 16px; font-weight: 600; white-space: nowrap; }
+  .stores { display: flex; gap: 8px; margin-top: 3px; }
+  .badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.25);
+    border-radius: 8px; padding: 4px 10px;
+    color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap;
+  }
+  .url { color: #8fe8ff; font-size: 13px; font-weight: 600; letter-spacing: .5px; white-space: nowrap; }
+
+  .qr { flex: none; background: #fff; border-radius: 10px; padding: 6px; }
+  .qr img { width: 96px; height: 96px; display: block; }
+  .scan { color: #ffd75e; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-top: 3px; }
+</style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="icon"><img src="lastcards-icon.png" alt="LastCards"></div>
+    <div class="text">
+      <div class="title">LAST CARDS</div>
+      <div class="tag">Play it all. Leave nothing.</div>
+      <div class="stores">
+        <span class="badge"> App Store</span>
+        <span class="badge">▶ Google Play</span>
+      </div>
+      <div class="url">absolutenoobstudio.co.uk/last-cards</div>
+    </div>
+    <div>
+      <div class="qr"><img src="lastcards-qr.png" alt="QR"></div>
+      <div class="scan">Scan to get it</div>
+    </div>
+  </div>
+
+<script>
+// Slide in for SHOW seconds every INTERVAL seconds. Override via ?interval=360&show=25&always
+const q = new URLSearchParams(location.search);
+const INTERVAL = (parseInt(q.get("interval"), 10) || 360) * 1000;
+const SHOW = (parseInt(q.get("show"), 10) || 25) * 1000;
+const card = document.getElementById("card");
+
+function cycle() {
+  card.classList.remove("out");
+  card.classList.add("in");
+  setTimeout(() => {
+    card.classList.remove("in");
+    card.classList.add("out");
+  }, SHOW);
+}
+
+if (q.has("always")) {
+  card.classList.add("in");
+} else {
+  setTimeout(cycle, 5000);           // first appearance shortly after scene load
+  setInterval(cycle, INTERVAL);
+}
+</script>
+</body>
+</html>

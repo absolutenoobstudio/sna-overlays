@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; display: flex; align-items: stretch; justify-content: center; padding: 8px; }
+
+  .panel {
+    width: 100%;
+    background: linear-gradient(180deg, rgba(20,6,10,.94), rgba(10,4,6,.94));
+    border: 1px solid rgba(212,175,55,.5);
+    border-radius: 18px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgba(0,0,0,.55);
+    opacity: 0; transform: translateY(14px);
+    transition: opacity .6s, transform .6s;
+  }
+  .panel.show { opacity: 1; transform: translateY(0); }
+
+  .head {
+    padding: 14px 22px 12px;
+    border-bottom: 1px solid rgba(212,175,55,.35);
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .head .t1 { color: #ffd75e; font-size: 22px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
+  .head .t2 { color: #9c8a95; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+
+  .rows { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding: 8px 0; overflow: hidden; }
+  .row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 22px;
+  }
+  .row:nth-child(even) { background: rgba(255,255,255,.04); }
+  .row img { width: 28px; height: 28px; object-fit: contain; flex: none; }
+  .row .name { color: #e8dfd4; font-size: 18px; font-weight: 700; width: 56px; }
+  .row .name.away { text-align: right; }
+  .row .mid {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .row .sc {
+    color: #fff; font-size: 22px; font-weight: 800; min-width: 24px; text-align: center;
+  }
+  .row .dash { color: #d4af37; font-weight: 700; }
+  .row .st { width: 62px; text-align: right; color: #9c8a95; font-size: 13px; font-weight: 700; flex: none; }
+  .row .st.live { color: #ff5e75; }
+  .row .st.live::before {
+    content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: #ff3b5c; margin-right: 5px; animation: blink 1.4s infinite; vertical-align: middle;
+  }
+  @keyframes blink { 50% { opacity: .2; } }
+  .empty { color: #9c8a95; font-size: 17px; font-weight: 600; text-align: center; padding: 30px 20px; }
+</style>
+</head>
+<body>
+  <div class="panel" id="panel">
+    <div class="head"><span class="t1">Around the League</span><span class="t2" id="league"></span></div>
+    <div class="rows" id="rows"><div class="empty">Loading scores…</div></div>
+  </div>
+
+<script>
+const TEAM_ID = "359";
+const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
+const panel = document.getElementById("panel");
+
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+async function findArsenalLeague() {
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      for (const ev of j.events ?? []) {
+        if (ev.competitions?.[0]?.competitors?.some(c => String(c.team?.id) === TEAM_ID)) {
+          return { lg, leagueName: j.leagues?.[0]?.abbreviation || lg, arsenalEventId: ev.id, data: j };
+        }
+      }
+    } catch (e) {}
+  }
+  // fallback: Premier League
+  try {
+    const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard`);
+    return { lg: "eng.1", leagueName: j.leagues?.[0]?.abbreviation || "Premier League", arsenalEventId: null, data: j };
+  } catch (e) { return null; }
+}
+
+function statusLabel(ev) {
+  const st = ev.status;
+  const state = st?.type?.state;
+  if (state === "in") return { text: st.displayClock || "LIVE", live: true };
+  if (state === "post") return { text: "FT", live: false };
+  const d = new Date(ev.date);
+  return { text: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), live: false };
+}
+
+function row(ev) {
+  const comp = ev.competitions[0];
+  const home = comp.competitors.find(c => c.homeAway === "home");
+  const away = comp.competitors.find(c => c.homeAway === "away");
+  const st = statusLabel(ev);
+  const started = ev.status?.type?.state !== "pre";
+  return `<div class="row">
+    <img src="${home.team.logo || ""}" alt="">
+    <span class="name">${home.team.abbreviation || ""}</span>
+    <span class="mid">
+      <span class="sc">${started ? home.score ?? "" : ""}</span>
+      <span class="dash">${started ? "–" : "v"}</span>
+      <span class="sc">${started ? away.score ?? "" : ""}</span>
+    </span>
+    <span class="name away">${away.team.abbreviation || ""}</span>
+    <img src="${away.team.logo || ""}" alt="">
+    <span class="st ${st.live ? "live" : ""}">${st.text}</span>
+  </div>`;
+}
+
+async function tick() {
+  try {
+    const res = await findArsenalLeague();
+    if (res) {
+      document.getElementById("league").textContent = res.leagueName;
+      const others = (res.data.events ?? []).filter(ev => ev.id !== res.arsenalEventId);
+      document.getElementById("rows").innerHTML = others.length
+        ? others.slice(0, 9).map(row).join("")
+        : `<div class="empty">No other fixtures in this round today</div>`;
+      panel.classList.add("show");
+    }
+  } catch (e) {}
+  setTimeout(tick, 30000);
+}
+tick();
+</script>
+</body>
+</html>

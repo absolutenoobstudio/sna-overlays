@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  .art {
+    position: absolute; inset: 0;
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920'><path fill='white' fill-rule='evenodd' d='M0 0H1080V1920H0Z M90 430H990V936H90Z M90 1010H990V1516H90Z'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920'><path fill='white' fill-rule='evenodd' d='M0 0H1080V1920H0Z M90 430H990V936H90Z M90 1010H990V1516H90Z'/></svg>");
+    -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  }
+
+  .base {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(900px 620px at 50% -3%, rgba(190,20,32,.38), transparent 62%),
+      radial-gradient(800px 560px at 50% 103%, rgba(40,170,90,.16), transparent 60%),
+      linear-gradient(180deg, #0d0c10 0%, #14090c 48%, #0a0a0d 100%);
+  }
+  .hazard {
+    position: absolute; left: 0; right: 0; height: 64px; opacity: .28;
+    background: repeating-linear-gradient(135deg, #c0121f 0 20px, transparent 20px 40px);
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 15%, black 85%, transparent);
+    mask-image: linear-gradient(90deg, transparent, black 15%, black 85%, transparent);
+  }
+  .hazard.t { top: 268px; } .hazard.b { bottom: 250px; }
+
+  .marks {
+    position: absolute; inset: 0; opacity: .05; overflow: hidden;
+    display: flex; flex-wrap: wrap; align-content: flex-start; gap: 40px 60px;
+    padding: 30px; transform: rotate(-8deg) scale(1.3); transform-origin: center;
+  }
+  .marks span { color: #fff; font-size: 34px; font-weight: 900; letter-spacing: 6px; white-space: nowrap; }
+
+  .grain {
+    position: absolute; inset: 0; opacity: .5;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.020) 0 1px, transparent 1px 4px);
+  }
+
+  .banner {
+    position: absolute; left: 0; right: 0; top: 0; height: 300px;
+    background: linear-gradient(180deg, rgba(150,10,22,.55), rgba(12,6,8,0));
+    border-bottom: 1px solid rgba(255,90,96,.18);
+  }
+  .kicker {
+    position: absolute; left: 0; right: 0; top: 300px; text-align: center;
+    color: rgba(255,190,195,.55); font-size: 17px; font-weight: 900;
+    letter-spacing: 10px; text-transform: uppercase;
+  }
+  .foot {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 300px;
+    background: linear-gradient(0deg, rgba(8,4,6,.92), rgba(8,4,6,0));
+  }
+
+  .win {
+    position: absolute; left: 90px; width: 900px; height: 506px;
+    border: 3px solid rgba(212,175,55,.85); border-radius: 26px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 18px 46px rgba(0,0,0,.55),
+                inset 0 0 30px rgba(0,0,0,.45);
+  }
+  .win.t { top: 430px; } .win.b { top: 1010px; }
+  .corner { position: absolute; width: 34px; height: 34px; border: 3px solid #ff5a60; }
+  .corner.tl { left: -3px; top: -3px; border-right: 0; border-bottom: 0; border-radius: 26px 0 0 0; }
+  .corner.br { right: -3px; bottom: -3px; border-left: 0; border-top: 0; border-radius: 0 0 26px 0; }
+
+  .vs {
+    position: absolute; left: 0; right: 0; top: 936px; height: 74px;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,.12); font-size: 46px; font-weight: 900; letter-spacing: 4px;
+  }
+</style>
+</head>
+<body>
+  <div class="art">
+    <div class="base"></div>
+    <div class="marks" id="marks"></div>
+    <div class="banner"></div>
+    <div class="kicker">Rivals WatchAlong</div>
+    <div class="hazard t"></div>
+    <div class="hazard b"></div>
+    <div class="foot"></div>
+    <div class="grain"></div>
+  </div>
+
+  <div class="win t"><div class="corner tl"></div><div class="corner br"></div></div>
+  <div class="win b"><div class="corner tl"></div><div class="corner br"></div></div>
+  <div class="vs">VS</div>
+
+<script>
+  const m = document.getElementById("marks");
+  const words = ["HATE WATCH", "NOT OUR CLUB", "RIVALS WATCHALONG", "HATE WATCH"];
+  let html = "";
+  for (let i = 0; i < 70; i++) html += `<span>${words[i % words.length]}</span>`;
+  m.innerHTML = html;
+</script>
+</body>
+</html>

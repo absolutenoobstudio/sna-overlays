@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; background: transparent; position: relative; }
+  .bgfill {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(800px 600px at 50% -4%, rgba(239,1,7,.20), transparent 60%),
+      radial-gradient(700px 600px at 50% 104%, rgba(212,175,55,.10), transparent 60%),
+      #120508;
+  }
+  .texture { position: absolute; inset: 0; z-index: 1; background: repeating-linear-gradient(45deg, rgba(255,255,255,.013) 0 2px, transparent 2px 14px); }
+
+  .top { position: absolute; top: 170px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; z-index: 3; }
+  .logo { width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 0 16px rgba(255,215,94,.35)); animation: breathe 4s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.05); } }
+  .ft { color: #ffd75e; font-size: 40px; font-weight: 900; letter-spacing: 10px; }
+  .comp { color: #9c8a95; font-size: 17px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; text-align: center; padding: 0 40px; }
+
+  .scorecard {
+    position: absolute; top: 520px; left: 40px; right: 40px; z-index: 3;
+    display: flex; align-items: center; justify-content: center; gap: 22px;
+    background: linear-gradient(180deg, rgba(20,6,10,.85), rgba(10,4,6,.85));
+    border: 1px solid rgba(212,175,55,.5); border-radius: 20px; padding: 20px 24px;
+    animation: rise .8s cubic-bezier(.2,.9,.3,1) both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+  .side { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 200px; }
+  .side img { width: 84px; height: 84px; object-fit: contain; }
+  .side .ab { color: #fff; font-size: 30px; font-weight: 800; }
+  .sc { display: flex; align-items: center; gap: 12px; }
+  .sc .n { color: #fff; font-size: 78px; font-weight: 900; line-height: 1; min-width: 60px; text-align: center; }
+  .sc .d { color: #d4af37; font-size: 40px; font-weight: 700; }
+  .win { color: #ffd75e !important; }
+
+  .panel {
+    position: absolute; left: 40px; right: 40px; z-index: 3;
+    background: linear-gradient(180deg, rgba(20,6,10,.85), rgba(10,4,6,.85));
+    border: 1px solid rgba(212,175,55,.42); border-radius: 18px; padding: 18px 24px;
+    animation: rise .8s ease .25s both;
+  }
+  #goalsPanel { top: 760px; min-height: 300px; }
+  #statsPanel { top: 1090px; min-height: 300px; }
+  .panel h3 { color: #ffd75e; font-size: 20px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; }
+
+  .goal { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,.07); }
+  .goal:first-of-type { border-top: none; }
+  .goal .ic { font-size: 20px; width: 30px; }
+  .goal img { width: 26px; height: 26px; object-fit: contain; }
+  .goal .who { flex: 1; color: #e8dfd4; font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .goal .min { color: #d4af37; font-size: 18px; font-weight: 800; width: 56px; text-align: right; }
+
+  .srow { display: flex; align-items: center; gap: 14px; padding: 9px 0; border-top: 1px solid rgba(255,255,255,.07); }
+  .srow:first-of-type { border-top: none; }
+  .srow .v { color: #fff; font-size: 23px; font-weight: 800; width: 96px; }
+  .srow .v.r { text-align: right; }
+  .srow .l { flex: 1; text-align: center; color: #9c8a95; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  .bar { height: 12px; border-radius: 999px; overflow: hidden; display: flex; background: rgba(255,255,255,.12); margin: 4px 0 10px; }
+  .bar .h { background: linear-gradient(90deg, #ef0107, #ff4d4d); }
+  .bar .a { background: linear-gradient(90deg, #4d9fff, #2d6fd6); flex: 1; }
+
+  .standing { position: absolute; top: 1430px; left: 0; right: 0; text-align: center; z-index: 3; color: #e8dfd4; font-size: 21px; font-weight: 700; animation: rise .8s ease .5s both; }
+  .standing b { color: #ffd75e; }
+
+  .footer { position: absolute; bottom: 300px; left: 0; right: 0; text-align: center; z-index: 3; animation: rise .8s ease .7s both; }
+  .footer .th { color: #fff; font-size: 44px; font-weight: 900; letter-spacing: 5px; }
+  .rule { width: 380px; height: 3px; background: #d4af37; margin: 12px auto; opacity: .85; }
+  .footer .sub { color: #9c8a95; font-size: 19px; font-weight: 700; letter-spacing: 1px; line-height: 1.5; padding: 0 50px; }
+  .footer .sub b { color: #ffd75e; }
+  .empty { color: #9c8a95; font-size: 18px; font-weight: 600; text-align: center; padding: 26px 8px; line-height: 1.6; }
+</style>
+</head>
+<body>
+  <div class="bgfill"></div>
+  <div class="texture"></div>
+
+  <div class="top">
+    <img class="logo" src="sna-logo.png" alt="">
+    <div class="ft" id="ftLabel">FULL TIME</div>
+    <div class="comp" id="comp"></div>
+  </div>
+
+  <div class="scorecard" id="scorecard" style="display:none">
+    <div class="side"><img id="hLogo"><span class="ab" id="hAb"></span></div>
+    <div class="sc"><span class="n" id="hSc">-</span><span class="d">–</span><span class="n" id="aSc">-</span></div>
+    <div class="side"><img id="aLogo"><span class="ab" id="aAb"></span></div>
+  </div>
+
+  <div class="panel" id="goalsPanel"><h3>Goals</h3><div id="goals"><div class="empty">No match data yet</div></div></div>
+  <div class="panel" id="statsPanel"><h3>Match Stats</h3><div id="stats"><div class="empty">No match data yet</div></div></div>
+
+  <div class="standing" id="standing"></div>
+
+  <div class="footer">
+    <div class="th">THANKS FOR WATCHING</div>
+    <div class="rule"></div>
+    <div class="sub">SAM &amp; NOOB · SNA FOOTBALL<br>play our game <b>LAST CARDS</b> — absolutenoobstudio.co.uk</div>
+  </div>
+
+<script>
+const TEAM_ID = "359";
+const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
+const $ = (id) => document.getElementById(id);
+const DATES = new URLSearchParams(location.search).get("testdate");
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+let ctx = null;
+
+// Which Arsenal fixture should this overlay follow?
+// ESPN keeps old finished matches on the cup and European scoreboards long after
+// they are done, so anything that ended more than 36 hours ago is ignored - that
+// is what stops last season's result reappearing on stream. mode "finished"
+// wants the match just played, "current" wants the one being played or next up.
+// keepOld is set when a ?testdate= is in the URL, so testing with a past match
+// still works.
+function pickMatch(found, mode, keepOld) {
+  if (!found || !found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t  = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre  = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && (keepOld || now - t(m) < FRESH))
+                    .sort((a, b) => t(b) - t(a));
+  for (const g of (mode === "finished" ? [post, live, pre] : [live, pre, post]))
+    if (g.length) return g[0];
+  return null;
+}
+
+async function findMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard${DATES ? "?dates=" + DATES : ""}`);
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        if (comp?.competitors?.some(c => String(c.team?.id) === TEAM_ID)) found.push({ lg, leagueName: j.leagues?.[0]?.abbreviation || lg, ev, comp });
+      }
+    } catch (e) {}
+  }
+  return pickMatch(found, "finished", !!DATES);
+}
+function statVal(e, n) { const s = (e?.stats ?? []).find(x => x.name === n); return s ? (s.displayValue ?? s.value) : "–"; }
+function teamStat(t, n) { const s = (t?.statistics ?? []).find(x => x.name === n); return s ? s.displayValue : "0"; }
+
+async function render() {
+  ctx = await findMatch();
+  if (!ctx) { $("comp").textContent = "No fixture found"; return; }
+  const state = ctx.ev.status?.type?.state;
+  const home = ctx.comp.competitors.find(c => c.homeAway === "home");
+  const away = ctx.comp.competitors.find(c => c.homeAway === "away");
+  $("comp").textContent = `${ctx.leagueName}${ctx.comp.venue ? " · " + ctx.comp.venue.fullName : ""}`;
+  $("ftLabel").textContent = state === "post" ? "FULL TIME" : state === "in" ? "LIVE" : "NEXT UP";
+  $("scorecard").style.display = "flex";
+  $("hLogo").src = home.team.logo; $("aLogo").src = away.team.logo;
+  $("hAb").textContent = home.team.abbreviation; $("aAb").textContent = away.team.abbreviation;
+
+  if (state === "pre") {
+    const d = new Date(ctx.ev.date);
+    $("hSc").textContent = ""; $("aSc").textContent = "";
+    const dEl = document.querySelector(".sc .d");
+    dEl.textContent = d.toLocaleDateString([], { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    dEl.style.fontSize = "24px";
+  } else {
+    const hs = parseInt(home.score ?? "0", 10), as = parseInt(away.score ?? "0", 10);
+    $("hSc").textContent = hs; $("aSc").textContent = as;
+    $("hSc").classList.toggle("win", hs > as); $("aSc").classList.toggle("win", as > hs);
+  }
+
+  if (state !== "pre") {
+    try {
+      const sum = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ctx.lg}/summary?event=${ctx.ev.id}`);
+      const goals = (sum.keyEvents ?? []).filter(e => { const t = e.type?.text || ""; return t.includes("Goal") || t.includes("Penalty - Scored"); });
+      $("goals").innerHTML = goals.length ? goals.map(g => {
+        const who = g.participants?.[0]?.athlete?.displayName || "";
+        const t = g.type?.text || "";
+        const ic = t.includes("Own") ? "🥅" : t.includes("Penalty") ? "⚽" : "⚽";
+        const logo = g.team?.id === home.team.id ? home.team.logo : away.team.logo;
+        return `<div class="goal"><span class="ic">${ic}</span><img src="${logo}"><span class="who">${who}</span><span class="min">${g.clock?.displayValue ?? ""}</span></div>`;
+      }).join("") : `<div class="empty">No goals</div>`;
+
+      const teams = sum.boxscore?.teams;
+      if (teams && teams.length >= 2) {
+        const th = teams.find(t => t.homeAway === "home") ?? teams[0];
+        const ta = teams.find(t => t.homeAway === "away") ?? teams[1];
+        const hp = parseFloat(teamStat(th, "possessionPct")) || 50;
+        const rows = [["totalShots","Shots"],["shotsOnTarget","On target"],["wonCorners","Corners"],["foulsCommitted","Fouls"]];
+        $("stats").innerHTML =
+          `<div class="srow" style="border:none"><span class="v">${Math.round(hp)}%</span><span class="l">Possession</span><span class="v r">${Math.round(100-hp)}%</span></div>` +
+          `<div class="bar"><div class="h" style="width:${hp}%"></div><div class="a"></div></div>` +
+          rows.map(([k, lab]) => `<div class="srow"><span class="v">${teamStat(th,k)}</span><span class="l">${lab}</span><span class="v r">${teamStat(ta,k)}</span></div>`).join("");
+      }
+    } catch (e) { $("goals").innerHTML = `<div class="empty">Match detail unavailable</div>`; }
+  } else {
+    $("goals").innerHTML = `<div class="empty">Kick-off still to come —<br>join us next time</div>`;
+    $("stats").innerHTML = `<div class="empty">Form: ${home.team.abbreviation} ${home.form || "–"} · ${away.team.abbreviation} ${away.form || "–"}</div>`;
+  }
+
+  try {
+    const lgT = (ctx.lg === "eng.fa" || ctx.lg === "eng.league_cup") ? "eng.1" : ctx.lg;
+    const j = await jget(`https://site.api.espn.com/apis/v2/sports/soccer/${lgT}/standings`);
+    const entries = j.children?.[0]?.standings?.entries ?? j.standings?.entries ?? [];
+    const ars = entries.find(e => String(e.team?.id) === TEAM_ID);
+    if (ars) $("standing").innerHTML = `Arsenal — <b>${statVal(ars,"rank")}</b> · <b>${statVal(ars,"points")}</b> pts · GD <b>${statVal(ars,"pointDifferential")}</b>`;
+  } catch (e) {}
+}
+
+render();
+setInterval(render, 120000);
+
+if (!location.search.includes("nocycle")) {
+  const BOARD_S = 38, OUTRO_S = 13;
+  document.body.style.transition = "opacity 1.2s ease";
+  document.body.style.opacity = "1";
+  (async function cycle() {
+    for (;;) {
+      await new Promise(r => setTimeout(r, BOARD_S * 1000));
+      document.body.style.opacity = "0";
+      await new Promise(r => setTimeout(r, OUTRO_S * 1000));
+      document.body.style.opacity = "1";
+    }
+  })();
+}
+</script>
+</body>
+</html>

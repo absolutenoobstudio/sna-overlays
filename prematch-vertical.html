@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    background: transparent;
+    position: relative; overflow: hidden;
+  }
+  /* background on a real element: a <body> background propagates to the root
+     canvas, which OBS renders transparent */
+  .bgfill {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(800px 600px at 50% -5%, rgba(239,1,7,.22), transparent 60%),
+      radial-gradient(700px 600px at 50% 105%, rgba(212,175,55,.10), transparent 60%),
+      #120508;
+  }
+  .texture { position: absolute; inset: 0; z-index: 1; background: repeating-linear-gradient(45deg, rgba(255,255,255,.013) 0 2px, transparent 2px 14px); }
+
+  .top { position: absolute; top: 150px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 3; }
+  .logo { width: 150px; height: 150px; object-fit: contain; filter: drop-shadow(0 0 18px rgba(255,215,94,.35)); animation: breathe 4s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.05); } }
+  .title { color: #ffd75e; font-size: 36px; font-weight: 900; letter-spacing: 8px; }
+  .fixture { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
+  .fixture img { width: 48px; height: 48px; object-fit: contain; }
+  .fixture .tm { color: #fff; font-size: 32px; font-weight: 800; }
+  .fixture .vs { color: #d4af37; font-size: 24px; font-weight: 800; }
+  .meta { color: #9c8a95; font-size: 18px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; text-align: center; padding: 0 40px; }
+  .meta b { color: #e8dfd4; }
+
+  .pitchwrap { position: absolute; left: 50%; top: 520px; width: 640px; height: 850px; margin-left: -320px; z-index: 2; }
+  .pitch {
+    position: absolute; inset: 0; border-radius: 14px;
+    background: linear-gradient(180deg, #0c2818, #0a2214 49.8%, #0c2818 50.2%, #092012);
+    border: 2px solid rgba(212,175,55,.45);
+    box-shadow: 0 0 40px rgba(0,0,0,.6), inset 0 0 60px rgba(0,0,0,.45);
+  }
+  .line { position: absolute; border: 1.5px solid rgba(255,255,255,.28); }
+  .halfway { left: 0; right: 0; top: 50%; border-width: 0 0 1.5px 0 !important; }
+  .centercircle { left: 50%; top: 50%; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; }
+  .box-t { left: 25%; right: 25%; top: -2px; height: 92px; border-top: none !important; }
+  .box-b { left: 25%; right: 25%; bottom: -2px; height: 92px; border-bottom: none !important; }
+
+  .player { position: absolute; width: 0; height: 0; z-index: 3; }
+  .dot {
+    position: absolute; left: -26px; top: -26px; width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 21px; font-weight: 900; color: #fff; transform: scale(0);
+  }
+  .player.ars .dot { background: radial-gradient(circle at 35% 30%, #ff5158, #c00006); border: 2px solid #ffd75e; }
+  .player.opp .dot { background: radial-gradient(circle at 35% 30%, #6c8fb8, #33506f); border: 2px solid #cfd8e6; }
+  .player .nm {
+    position: absolute; top: 28px; left: -85px; width: 170px; text-align: center;
+    color: #fff; font-size: 16px; font-weight: 700; text-shadow: 0 2px 5px rgba(0,0,0,.9); opacity: 0;
+  }
+  .player.in .dot { animation: pop .55s cubic-bezier(.2,1.6,.4,1) forwards; animation-delay: inherit; }
+  .player.in .nm { animation: nmfade .5s ease forwards; animation-delay: inherit; }
+  @keyframes pop { to { transform: scale(1); } }
+  @keyframes nmfade { to { opacity: 1; } }
+
+  .pitch-msg { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 4; text-align: center; display: none; width: 100%; }
+  .pitch-msg.on { display: block; }
+  .pitch-msg .big { color: #fff; font-size: 34px; font-weight: 900; letter-spacing: 4px; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .5; } }
+  .pitch-msg .cd { color: #ffd75e; font-size: 52px; font-weight: 900; margin-top: 10px; }
+
+  .subs { position: absolute; left: 40px; right: 40px; top: 1400px; z-index: 2; display: flex; gap: 20px; }
+  .subcol {
+    flex: 1; background: linear-gradient(180deg, rgba(20,6,10,.86), rgba(10,4,6,.86));
+    border: 1px solid rgba(212,175,55,.4); border-radius: 16px; padding: 14px 18px;
+  }
+  .subcol h4 { color: #ffd75e; font-size: 15px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .subcol .p { color: #cfc6ce; font-size: 15.5px; font-weight: 600; line-height: 1.55; opacity: 0; }
+  .subcol .p.in { animation: nmfade .4s ease forwards; animation-delay: inherit; }
+  .subcol .p b { color: #d4af37; }
+</style>
+</head>
+<body>
+  <div class="bgfill"></div>
+  <div class="texture"></div>
+  <div class="top">
+    <img class="logo" src="sna-logo.png" alt="">
+    <div class="title">LINE-UPS</div>
+    <div class="fixture" id="fixture"></div>
+    <div class="meta" id="meta">Loading fixture…</div>
+  </div>
+
+  <div class="pitchwrap">
+    <div class="pitch">
+      <div class="line halfway"></div><div class="line centercircle"></div>
+      <div class="line box-t"></div><div class="line box-b"></div>
+    </div>
+    <div id="players"></div>
+    <div class="pitch-msg" id="pitchMsg">
+      <div class="big">TEAM NEWS INCOMING</div>
+      <div class="cd" id="cd"></div>
+    </div>
+  </div>
+
+  <div class="subs">
+    <div class="subcol"><h4 id="hSubT">Subs</h4><div id="hSubs"></div></div>
+    <div class="subcol"><h4 id="aSubT">Subs</h4><div id="aSubs"></div></div>
+  </div>
+
+<script>
+const TEAM_ID = "359";
+const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
+const $ = (id) => document.getElementById(id);
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+const DATES = new URLSearchParams(location.search).get("testdate");
+let ctx = null, lineupsShown = false, kickoff = null;
+
+// Which Arsenal fixture should this overlay follow?
+// ESPN keeps old finished matches on the cup and European scoreboards long after
+// they are done, so anything that ended more than 36 hours ago is ignored - that
+// is what stops last season's result reappearing on stream. mode "finished"
+// wants the match just played, "current" wants the one being played or next up.
+// keepOld is set when a ?testdate= is in the URL, so testing with a past match
+// still works.
+function pickMatch(found, mode, keepOld) {
+  if (!found || !found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t  = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre  = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && (keepOld || now - t(m) < FRESH))
+                    .sort((a, b) => t(b) - t(a));
+  for (const g of (mode === "finished" ? [post, live, pre] : [live, pre, post]))
+    if (g.length) return g[0];
+  return null;
+}
+
+async function findMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard${DATES ? "?dates=" + DATES : ""}`);
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        if (comp?.competitors?.some(c => String(c.team?.id) === TEAM_ID)) {
+          found.push({ lg, leagueName: j.leagues?.[0]?.abbreviation || lg, ev, comp });
+        }
+      }
+    } catch (e) {}
+  }
+  return pickMatch(found, "current", !!DATES);
+}
+
+function renderHeader() {
+  const home = ctx.comp.competitors.find(c => c.homeAway === "home");
+  const away = ctx.comp.competitors.find(c => c.homeAway === "away");
+  $("fixture").innerHTML = `<img src="${home.team.logo}"><span class="tm">${home.team.abbreviation}</span><span class="vs">VS</span><span class="tm">${away.team.abbreviation}</span><img src="${away.team.logo}">`;
+  const d = new Date(ctx.ev.date);
+  kickoff = d;
+  const when = d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const venue = ctx.comp.venue ? `${ctx.comp.venue.fullName}` : "";
+  $("meta").innerHTML = `${ctx.leagueName} • ${when}${venue ? " • 🏟 <b>" + venue + "</b>" : ""}`;
+  $("hSubT").textContent = home.team.abbreviation + " Subs";
+  $("aSubT").textContent = away.team.abbreviation + " Subs";
+}
+
+function positionsFor(formation, count) {
+  let rows = [1];
+  if (formation && /^\d+(-\d+)+$/.test(formation)) rows = rows.concat(formation.split("-").map(Number));
+  else rows = [1, 4, 4, 2];
+  const pos = []; const m = rows.length;
+  rows.forEach((n, ri) => {
+    const yFrac = m === 1 ? 0 : ri / (m - 1);
+    for (let k = 0; k < n; k++) pos.push({ x: (100 / (n + 1)) * (k + 1), yFrac });
+  });
+  return pos.slice(0, count);
+}
+
+function playerHTML(p, side, x, y, delay) {
+  const nm = p.athlete?.shortName || p.athlete?.displayName || "";
+  return `<div class="player ${side} in" style="left:${x}%;top:${y}%;animation-delay:${delay}ms">
+    <div class="dot" style="animation-delay:${delay}ms">${p.jersey ?? ""}</div>
+    <div class="nm" style="animation-delay:${delay + 150}ms">${nm}</div>
+  </div>`;
+}
+
+function renderLineups(rosters) {
+  const home = ctx.comp.competitors.find(c => c.homeAway === "home");
+  const rHome = rosters.find(r => String(r.team?.id) === String(home.team.id)) ?? rosters.find(r => r.homeAway === "home") ?? rosters[0];
+  const rAway = rosters.find(r => r !== rHome);
+  if (!rHome?.roster?.length || !rAway?.roster?.length) return false;
+  const sortP = (a, b) => (parseInt(a.formationPlace) || 99) - (parseInt(b.formationPlace) || 99);
+  const stH = rHome.roster.filter(p => p.starter).sort(sortP);
+  const stA = rAway.roster.filter(p => p.starter).sort(sortP);
+  if (stH.length < 7 || stA.length < 7) return false;
+  const homeIsArs = String(home.team.id) === TEAM_ID;
+
+  const posH = positionsFor(rHome.formation, stH.length);
+  const posA = positionsFor(rAway.formation, stA.length);
+  let html = "";
+  stH.forEach((p, i) => { const { x, yFrac } = posH[i]; html += playerHTML(p, homeIsArs ? "ars" : "opp", x, 93 - yFrac * 41, i * 110); });
+  stA.forEach((p, i) => { const { x, yFrac } = posA[i]; html += playerHTML(p, homeIsArs ? "opp" : "ars", 100 - x, 7 + yFrac * 41, 1250 + i * 110); });
+  $("players").innerHTML = html;
+  $("pitchMsg").classList.remove("on");
+
+  const subLine = (r, base) => r.roster.filter(p => !p.starter).map((p, i) =>
+    `<div class="p in" style="animation-delay:${base + i * 60}ms"><b>${p.jersey ?? ""}</b> ${p.athlete?.shortName || p.athlete?.displayName || ""}</div>`).join("");
+  $("hSubs").innerHTML = subLine(rHome, 2300);
+  $("aSubs").innerHTML = subLine(rAway, 2300);
+  return true;
+}
+
+function updateCountdown() {
+  if (!kickoff || lineupsShown) return;
+  const ms = kickoff - Date.now();
+  if (ms <= 0) { $("cd").textContent = "KICK-OFF!"; return; }
+  const h = Math.floor(ms / 36e5), m = Math.floor(ms % 36e5 / 6e4), s = Math.floor(ms % 6e4 / 1e3);
+  const d = Math.floor(h / 24);
+  $("cd").textContent = d > 0 ? `${d}d ${h % 24}h ${m}m` : `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+async function tick() {
+  try {
+    if (!ctx) { ctx = await findMatch(); if (ctx) renderHeader(); }
+    if (ctx && !lineupsShown) {
+      $("pitchMsg").classList.add("on");
+      const sum = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${ctx.lg}/summary?event=${ctx.ev.id}`);
+      if (sum.rosters?.length >= 2 && renderLineups(sum.rosters)) lineupsShown = true;
+    }
+  } catch (e) {}
+  setTimeout(tick, lineupsShown ? 300000 : 45000);
+}
+setInterval(updateCountdown, 1000);
+tick();
+
+// Intro-video cycle: board fades out to reveal the intro loop behind. Disable with ?nocycle
+if (!location.search.includes("nocycle")) {
+  const INTRO_S = 25, BOARD_S = 40;
+  document.body.style.transition = "opacity 1.2s ease";
+  document.body.style.opacity = "0";
+  (async function introCycle() {
+    for (;;) {
+      await new Promise(r => setTimeout(r, INTRO_S * 1000));
+      document.body.style.opacity = "1";
+      await new Promise(r => setTimeout(r, BOARD_S * 1000));
+      document.body.style.opacity = "0";
+    }
+  })();
+}
+</script>
+</body>
+</html>

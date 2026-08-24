@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  /* NOTE: never put the background on <body> - it propagates to the root canvas
+     and OBS renders that transparent, which makes the bar vanish over video. */
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  .bgfill {
+    position: absolute; inset: 0;
+    display: flex; align-items: stretch;
+    background: linear-gradient(180deg, rgba(20,6,10,.94), rgba(8,3,5,.96));
+    border-top: 1px solid rgba(212,175,55,.55);
+    box-shadow: 0 -6px 22px rgba(0,0,0,.5);
+    opacity: 0; transition: opacity .8s ease;
+  }
+  .bgfill.show { opacity: 1; }
+
+  /* fixed label on the left */
+  .badge {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
+    padding: 0 26px 0 22px;
+    background: linear-gradient(180deg, #b8000a, #7c0007);
+    border-right: 2px solid rgba(212,175,55,.85);
+    z-index: 2;
+  }
+  .badge .crest { height: 60%; max-height: 40px; }
+  .badge .txt {
+    color: #fff; font-size: 20px; font-weight: 800;
+    letter-spacing: 3px; text-transform: uppercase; white-space: nowrap;
+    text-shadow: 0 2px 6px rgba(0,0,0,.6);
+  }
+
+  /* scrolling area */
+  .window { position: relative; flex: 1; overflow: hidden; }
+  .window::after {           /* soft fade so items do not pop at the right edge */
+    content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 90px;
+    background: linear-gradient(90deg, rgba(10,4,6,0), rgba(10,4,6,.95));
+    pointer-events: none; z-index: 2;
+  }
+  .track { position: absolute; top: 0; left: 0; height: 100%; display: flex; align-items: center; white-space: nowrap; }
+  .track.run { animation: roll linear infinite; }
+  @keyframes roll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  .run-half { display: flex; align-items: center; }
+
+  .item { display: inline-flex; align-items: baseline; gap: 9px; padding: 0 30px; }
+  .item .k { color: #9c8a95; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  .item .v { color: #fff; font-size: 21px; font-weight: 800; letter-spacing: .5px; }
+  .item .v.red { color: #ff5a60; }
+  .item .v.gold { color: #ffd75e; }
+  .item .v.dim { color: #cfc6ce; font-weight: 700; font-size: 19px; }
+
+  .sep { color: rgba(212,175,55,.75); font-size: 13px; transform: translateY(-2px); }
+
+  .live {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: #ef0107; color: #fff; font-size: 13px; font-weight: 800;
+    letter-spacing: 2px; padding: 4px 10px; border-radius: 4px; text-transform: uppercase;
+  }
+  .live .dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: blink 1.4s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+</style>
+</head>
+<body>
+  <div class="bgfill" id="bar">
+    <div class="badge">
+      <img class="crest" src="sna-logo.png" alt="">
+      <span class="txt" id="badgeText">SNA Football</span>
+    </div>
+    <div class="window"><div class="track" id="track"></div></div>
+  </div>
+
+<script>
+const TEAM_ID = "359";
+const LEAGUES = ["eng.1", "uefa.champions", "uefa.europa", "eng.fa", "eng.league_cup"];
+const Q = new URLSearchParams(location.search);
+const PX_PER_SEC = Number(Q.get("speed") || 95);   // scroll speed
+const REFRESH_MS = 60000;
+
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+// Same picker as every other board: ignore anything that finished more than 36
+// hours ago, so last season's results can never crawl across the bottom.
+function pickMatch(found, mode, keepOld) {
+  if (!found || !found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && (keepOld || now - t(m) < FRESH))
+                    .sort((a, b) => t(b) - t(a));
+  for (const g of (mode === "finished" ? [post, live, pre] : [live, pre, post])) if (g.length) return g[0];
+  return null;
+}
+
+const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+const item = (k, v, cls) => `<span class="item"><span class="k">${esc(k)}</span><span class="v ${cls || ""}">${esc(v)}</span></span><span class="sep">◆</span>`;
+const plain = html => `<span class="item">${html}</span><span class="sep">◆</span>`;
+
+function statOf(team, names) {
+  for (const n of names) {
+    const s = (team?.statistics ?? []).find(x => x.name === n);
+    if (s) return s.displayValue;
+  }
+  return null;
+}
+
+async function build() {
+  const bits = [];
+  let badge = "SNA Football";
+
+  // ---- Arsenal's own match ----
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        if (comp?.competitors?.some(c => String(c.team?.id) === TEAM_ID))
+          found.push({ lg, ev, comp, leagueName: j.leagues?.[0]?.abbreviation || lg });
+      }
+    } catch (e) {}
+  }
+  const m = pickMatch(found, "current", false);
+
+  if (m) {
+    const st = m.ev.status?.type?.state;
+    const us = m.comp.competitors.find(c => String(c.team?.id) === TEAM_ID);
+    const them = m.comp.competitors.find(c => String(c.team?.id) !== TEAM_ID);
+    const score = `${us.team.abbreviation} ${us.score ?? 0} - ${them.score ?? 0} ${them.team.abbreviation}`;
+
+    if (st === "in") {
+      badge = "Live";
+      bits.push(plain(`<span class="live"><span class="dot"></span>Live</span><span class="v" style="margin-left:10px">${esc(score)}</span><span class="v gold" style="margin-left:10px">${esc(m.ev.status?.displayClock || "")}</span>`));
+      const poss = statOf(us, ["possessionPct"]);
+      if (poss) bits.push(item("Possession", `${poss}% - ${statOf(them, ["possessionPct"]) ?? ""}%`));
+      const sh = statOf(us, ["totalShots"]), sht = statOf(us, ["shotsOnTarget"]);
+      if (sh) bits.push(item("Shots", `${sh}${sht ? ` (${sht} on target)` : ""}`));
+      const co = statOf(us, ["wonCorners", "corners"]);
+      if (co) bits.push(item("Corners", `${co} - ${statOf(them, ["wonCorners", "corners"]) ?? "0"}`));
+      const fo = statOf(us, ["foulsCommitted"]);
+      if (fo) bits.push(item("Fouls", `${fo} - ${statOf(them, ["foulsCommitted"]) ?? "0"}`));
+      const yc = statOf(us, ["yellowCards"]);
+      if (yc) bits.push(item("Cards", `${yc} - ${statOf(them, ["yellowCards"]) ?? "0"}`));
+      // goalscorers
+      const scorers = [];
+      for (const c of m.comp.competitors ?? [])
+        for (const d of c.details ?? [])
+          if (d.scoringPlay) scorers.push(`${(d.athletesInvolved?.[0]?.displayName || "").split(" ").pop()} ${d.clock?.displayValue || ""}`.trim());
+      if (scorers.length) bits.push(item("Scorers", scorers.join(", ")));
+    } else if (st === "post") {
+      badge = "Full Time";
+      bits.push(item("Full time", score, "gold"));
+      const poss = statOf(us, ["possessionPct"]);
+      if (poss) bits.push(item("Possession", `${poss}%`));
+      const sh = statOf(us, ["totalShots"]);
+      if (sh) bits.push(item("Shots", sh));
+    } else {
+      badge = "Next Up";
+      const kick = new Date(m.ev.date);
+      const mins = Math.round((kick - Date.now()) / 60000);
+      const cd = mins > 1440 ? `${Math.floor(mins / 1440)}d ${Math.floor((mins % 1440) / 60)}h`
+               : mins > 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m`
+               : mins > 0 ? `${mins}m` : "kick-off";
+      bits.push(item("Next up", m.ev.name, "gold"));
+      bits.push(item("Kick-off in", cd));
+      const venue = m.comp.venue?.fullName;
+      if (venue) bits.push(item("Venue", venue, "dim"));
+      const form = us.form || us.records?.[0]?.summary;
+      if (form) bits.push(item("Arsenal form", form));
+    }
+  }
+
+  // ---- other games in the league today ----
+  try {
+    const j = await jget("https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard");
+    const others = (j.events ?? []).filter(ev =>
+      !ev.competitions?.[0]?.competitors?.some(c => String(c.team?.id) === TEAM_ID));
+    const rows = others.slice(0, 8).map(ev => {
+      const c = ev.competitions?.[0]?.competitors ?? [];
+      const h = c.find(x => x.homeAway === "home"), a = c.find(x => x.homeAway === "away");
+      const s = ev.status?.type;
+      const when = s?.state === "pre" ? (ev.date || "").slice(11, 16)
+                 : s?.state === "in" ? (ev.status?.displayClock || "LIVE") : "FT";
+      return `${h?.team?.abbreviation ?? "?"} ${h?.score ?? 0}-${a?.score ?? 0} ${a?.team?.abbreviation ?? "?"} (${when})`;
+    });
+    if (rows.length) bits.push(item("Around the league", rows.join("   "), "dim"));
+  } catch (e) {}
+
+  // ---- league table ----
+  try {
+    const j = await jget("https://site.api.espn.com/apis/v2/sports/soccer/eng.1/standings");
+    const entries = j.children?.[0]?.standings?.entries ?? j.standings?.entries ?? [];
+    const val = (e, n) => (e.stats ?? []).find(s => s.name === n)?.displayValue ?? "";
+    const top = entries.slice(0, 6).map(e => `${val(e, "rank")} ${e.team?.abbreviation ?? e.team?.shortDisplayName} ${val(e, "points")}`);
+    if (top.length) bits.push(item("Table", top.join("   "), "dim"));
+    const ars = entries.find(e => String(e.team?.id) === TEAM_ID);
+    if (ars) bits.push(item("Arsenal", `${val(ars, "rank")} in the table - ${val(ars, "points")} pts, ${val(ars, "overall")}`, "gold"));
+  } catch (e) {}
+
+  bits.push(item("SNA Football", "Sam & Noob - like and subscribe", "dim"));
+  bits.push(item("Last Cards", "out now on Android & iOS", "dim"));
+
+  return { html: bits.join(""), badge };
+}
+
+const track = document.getElementById("track");
+const bar = document.getElementById("bar");
+
+async function refresh() {
+  let data;
+  try { data = await build(); } catch (e) { return; }
+  if (!data.html) return;
+
+  document.getElementById("badgeText").textContent = data.badge;
+
+  // two identical halves so the -50% loop is seamless
+  track.classList.remove("run");
+  track.innerHTML = `<span class="run-half">${data.html}</span><span class="run-half">${data.html}</span>`;
+
+  // duration from the real rendered width, so speed stays constant
+  requestAnimationFrame(() => {
+    const halfWidth = track.scrollWidth / 2;
+    const secs = Math.max(20, halfWidth / PX_PER_SEC);
+    track.style.animationDuration = secs + "s";
+    track.classList.add("run");
+    bar.classList.add("show");
+  });
+}
+
+refresh();
+setInterval(refresh, REFRESH_MS);
+</script>
+</body>
+</html>

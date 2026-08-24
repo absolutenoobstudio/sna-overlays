@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+         display: flex; align-items: center; justify-content: center; }
+
+  .bar {
+    display: flex; align-items: stretch;
+    background: linear-gradient(180deg, rgba(18,5,8,.95), rgba(8,3,5,.96));
+    border: 2px solid rgba(212,175,55,.55);
+    border-radius: 18px; overflow: hidden;
+    box-shadow: 0 10px 34px rgba(0,0,0,.6);
+    opacity: 0; transform: translateY(-14px);
+    transition: opacity .6s, transform .6s, border-color .8s, box-shadow .8s;
+  }
+  .bar.show { opacity: 1; transform: translateY(0); }
+  /* mood: they are losing = good news */
+  .bar.good { border-color: rgba(120,230,140,.85); box-shadow: 0 10px 40px rgba(60,200,90,.28); }
+  .bar.bad  { border-color: rgba(255,90,96,.85);  box-shadow: 0 10px 40px rgba(220,40,50,.26); }
+
+  .tag {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 0 26px; background: linear-gradient(180deg, #7c0007, #4a0004);
+    border-right: 2px solid rgba(212,175,55,.6); min-width: 190px;
+  }
+  .tag .t1 { color: #ffd75e; font-size: 22px; font-weight: 900; letter-spacing: 4px; }
+  .tag .t2 { color: #e8b7bb; font-size: 11px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-top: 3px; }
+
+  .mid { display: flex; align-items: center; gap: 24px; padding: 0 34px; }
+  .side { display: flex; align-items: center; gap: 14px; }
+  .side img { width: 60px; height: 60px; object-fit: contain; }
+  .side .ab { color: #fff; font-size: 40px; font-weight: 900; letter-spacing: 2px; }
+  .side .ab.dim { color: #cfc6ce; }
+  .sc { color: #ffd75e; font-size: 54px; font-weight: 900; letter-spacing: 3px; min-width: 150px; text-align: center; }
+
+  .right { display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+           padding: 0 30px 0 26px; border-left: 1px solid rgba(212,175,55,.3); min-width: 300px; }
+  .clock { color: #ffd75e; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+  .clock.live::before {
+    content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    background: #ff3b3b; margin-right: 9px; animation: blink 1.3s infinite;
+  }
+  @keyframes blink { 50% { opacity: .25; } }
+  .mood { font-size: 17px; font-weight: 900; letter-spacing: 2.5px; text-transform: uppercase; margin-top: 5px; }
+  .mood.good { color: #8ef2a5; }
+  .mood.bad  { color: #ff7b80; }
+  .mood.neutral { color: #9c8a95; }
+
+  /* ?compact - badges, score and clock, filling the whole source so it
+     renders at native resolution instead of being cropped and scaled up. */
+  body.compact { padding: 0; }
+  body.compact .bar { width: 100%; height: 100%; border-radius: 12px; }
+  body.compact .tag { display: none; }
+  body.compact .mid { flex: 1; justify-content: center; gap: 3.5%; padding: 0 3%; }
+
+  /* keep the clock in compact mode, drop the mood line - the bar's border
+     glow already carries the mood, and the text needs width we haven't got */
+  body.compact .right {
+    flex: 0 0 auto; min-width: 0; flex-direction: row;
+    align-items: center; justify-content: center; padding: 0 4%;
+  }
+  body.compact .mood { display: none; }
+  body.compact .clock { font-size: 17vh; white-space: nowrap; }
+  body.compact .clock.live::before { width: 6.5vh; height: 6.5vh; margin-right: 3vh; }
+  /* vh here is 1% of the SOURCE height, so these stay in proportion whatever
+     size the browser source is set to. width:auto let the images render at
+     their intrinsic size and they filled the whole bar. */
+  body.compact .side img { width: 46vh; height: 46vh; object-fit: contain; }
+  body.compact .side .ab { font-size: 20vh; letter-spacing: 1px; }
+  body.compact .sc { font-size: 28vh; min-width: 22%; }
+</style>
+</head>
+<body>
+  <div class="bar" id="bar">
+    <div class="tag"><div class="t1">HATE</div><div class="t2">Watch</div></div>
+    <div class="mid">
+      <div class="side"><img id="rLogo" alt=""><span class="ab" id="rAb">—</span></div>
+      <div class="sc" id="score">0 - 0</div>
+      <div class="side"><span class="ab dim" id="fAb">—</span><img id="fLogo" alt=""></div>
+    </div>
+    <div class="right">
+      <div class="clock" id="clock">—</div>
+      <div class="mood neutral" id="mood">Looking for a rival…</div>
+    </div>
+  </div>
+
+<script>
+// the traditional big six, minus Arsenal
+const RIVALS = {
+  "360": "Manchester United", "364": "Liverpool", "363": "Chelsea",
+  "382": "Manchester City",   "367": "Tottenham Hotspur",
+};
+const LEAGUES = ["eng.1", "uefa.champions", "uefa.europa", "eng.fa", "eng.league_cup"];
+const Q = new URLSearchParams(location.search);
+const FORCE_ID = Q.get("id");                 // optional: pin one club
+const DATES = Q.get("testdate");
+const COMPACT = Q.has("compact");
+if (COMPACT) document.addEventListener("DOMContentLoaded", () => document.body.classList.add("compact"));
+
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+const $ = id => document.getElementById(id);
+
+function pick(found) {
+  if (!found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && (DATES || now - t(m) < FRESH)).sort((a, b) => t(b) - t(a));
+  for (const g of [live, pre, post]) if (g.length) return g[0];
+  return null;
+}
+
+async function findRivalMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard${DATES ? "?dates=" + DATES : ""}`);
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        const rival = comp?.competitors?.find(c => {
+          const id = String(c.team?.id);
+          return FORCE_ID ? id === FORCE_ID : RIVALS[id];
+        });
+        if (rival) found.push({ lg, ev, comp, rival });
+      }
+    } catch (e) {}
+  }
+  return pick(found);
+}
+
+// ESPN gives minutes ("67'") but also status.clock in seconds
+function matchClock(st) {
+  const secs = Number(st?.clock);
+  if (!isFinite(secs) || secs <= 0) return st?.displayClock || "";
+  const mm = Math.floor(secs / 60), ss = Math.floor(secs % 60);
+  const base = String(mm).padStart(2, "0") + ":" + String(ss).padStart(2, "0");
+  const extra = /\+\s*(\d+)/.exec(st?.displayClock || "");
+  return extra ? base + " +" + extra[1] : base;
+}
+
+function moodFor(state, rs, fs) {
+  if (state === "pre") return ["neutral", "Kick-off pending"];
+  if (rs < fs)  return ["good", state === "post" ? "They lost. Beautiful." : "They're losing"];
+  if (rs > fs)  return ["bad",  state === "post" ? "They won. Grim." : "They're winning"];
+  return ["neutral", state === "post" ? "A draw. We'll take it." : "All square"];
+}
+
+async function tick() {
+  let m = null;
+  try { m = await findRivalMatch(); } catch (e) {}
+  const bar = $("bar");
+
+  if (!m) {
+    $("mood").textContent = "No rival playing right now";
+    $("mood").className = "mood neutral";
+    $("clock").textContent = "—";
+    $("clock").classList.remove("live");
+    bar.classList.add("show");
+    bar.classList.remove("good", "bad");
+    return setTimeout(tick, 60000);
+  }
+
+  const rival = m.rival;
+  const foe = m.comp.competitors.find(c => c !== rival);
+  const rs = parseInt(rival.score ?? "0", 10), fs = parseInt(foe.score ?? "0", 10);
+  const st = m.ev.status, state = st?.type?.state;
+
+  $("rLogo").src = rival.team?.logo || "";
+  $("fLogo").src = foe.team?.logo || "";
+  $("rAb").textContent = rival.team?.abbreviation || "";
+  $("fAb").textContent = foe.team?.abbreviation || "";
+  $("score").textContent = state === "pre" ? "vs" : `${rs} - ${fs}`;
+
+  if (state === "in") {
+    $("clock").textContent = matchClock(st);
+    $("clock").classList.add("live");
+  } else if (state === "post") {
+    // compact has no room for "Full time"
+    $("clock").textContent = COMPACT ? "FT" : "Full time";
+    $("clock").classList.remove("live");
+  } else {
+    const d = new Date(m.ev.date);
+    const hhmm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    $("clock").textContent = COMPACT ? hhmm
+      : d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) + " " + hhmm;
+    $("clock").classList.remove("live");
+  }
+
+  const [cls, text] = moodFor(state, rs, fs);
+  $("mood").textContent = text;
+  $("mood").className = "mood " + cls;
+  bar.classList.remove("good", "bad");
+  if (cls !== "neutral") bar.classList.add(cls);
+  bar.classList.add("show");
+
+  setTimeout(tick, state === "in" ? 15000 : 60000);
+}
+tick();
+</script>
+</body>
+</html>

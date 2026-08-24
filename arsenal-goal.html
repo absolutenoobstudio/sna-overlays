@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  .flash {
+    position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(239,1,7,.45), transparent 70%);
+  }
+  .flash.go { animation: flashAnim 1.2s ease-out 2; }
+  @keyframes flashAnim { 20% { opacity: 1; } 100% { opacity: 0; } }
+
+  .goalwrap {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1vh;
+    opacity: 0; pointer-events: none;
+  }
+  .goalwrap.go { animation: wrapAnim 7s ease forwards; }
+  @keyframes wrapAnim { 5% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
+
+  .goaltext {
+    font-size: 14vw; font-weight: 900; letter-spacing: 1vw; line-height: 1;
+    background: linear-gradient(90deg, #ffd75e, #ef0107, #ffd75e);
+    background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 6px 18px rgba(0,0,0,.7));
+    transform: scale(.3);
+  }
+  .goalwrap.go .goaltext { animation: pop 7s cubic-bezier(.2,1.4,.3,1) forwards, shimmer 2s linear infinite; }
+  @keyframes pop { 8% { transform: scale(1.15); } 12% { transform: scale(1); } 90% { transform: scale(1); } 100% { transform: scale(1.05); } }
+  @keyframes shimmer { to { background-position: 200% 0; } }
+
+  .scorer {
+    font-size: 3.2vw; font-weight: 800; color: #fff; letter-spacing: .3vw;
+    background: rgba(10,4,6,.8); border: 1px solid rgba(212,175,55,.5);
+    border-radius: 999px; padding: .8vh 2.5vw;
+  }
+
+  .conceded {
+    position: absolute; top: 4vh; left: 50%; transform: translateX(-50%) translateY(-150%);
+    background: rgba(10,4,6,.9); border: 1px solid rgba(255,255,255,.2);
+    border-radius: 999px; padding: 1vh 2.5vw;
+    color: #e8dfd4; font-size: 2vw; font-weight: 700;
+    opacity: 0; pointer-events: none;
+  }
+  .conceded.go { animation: slideDown 6s ease forwards; }
+  @keyframes slideDown {
+    8% { transform: translateX(-50%) translateY(0); opacity: 1; }
+    85% { transform: translateX(-50%) translateY(0); opacity: 1; }
+    100% { transform: translateX(-50%) translateY(-150%); opacity: 0; }
+  }
+
+  .confetti { position: absolute; top: -3vh; border-radius: 2px; opacity: 0; pointer-events: none; }
+  .confetti.go { animation: fall linear forwards; }
+  @keyframes fall {
+    0% { opacity: 1; transform: translateY(0) rotate(0); }
+    100% { opacity: .9; transform: translateY(110vh) rotate(720deg); }
+  }
+</style>
+</head>
+<body>
+  <div class="flash" id="flash"></div>
+  <div class="goalwrap" id="goalwrap">
+    <div class="goaltext">GOAL!</div>
+    <div class="scorer" id="scorer"></div>
+  </div>
+  <div class="conceded" id="conceded"></div>
+
+<script>
+const TEAM_ID = "359";
+const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
+let matchRef = null, arsScore = null, oppScore = null, firstPoll = true;
+
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+// Same picker as the other boards: a match that finished more than 36 hours ago
+// is ignored, so the alert always tracks the live or next fixture.
+function pickMatch(found, mode, keepOld) {
+  if (!found || !found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t  = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre  = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && (keepOld || now - t(m) < FRESH))
+                    .sort((a, b) => t(b) - t(a));
+  for (const g of (mode === "finished" ? [post, live, pre] : [live, pre, post]))
+    if (g.length) return g[0];
+  return null;
+}
+
+async function findMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        if (comp?.competitors?.some(c => String(c.team?.id) === TEAM_ID)) found.push({ lg, ev });
+      }
+    } catch (e) {}
+  }
+  return pickMatch(found, "current", false);
+}
+
+function replay(el) { el.classList.remove("go"); void el.offsetWidth; el.classList.add("go"); }
+
+function confettiBurst() {
+  const colors = ["#ef0107", "#ffd75e", "#ffffff", "#d4af37"];
+  for (let i = 0; i < 90; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.width = (0.5 + Math.random() * 0.7) + "vw";
+    c.style.height = (0.9 + Math.random() * 1.2) + "vh";
+    c.style.background = colors[i % colors.length];
+    c.style.animationDuration = (2.4 + Math.random() * 2.4) + "s";
+    c.style.animationDelay = (Math.random() * 1.2) + "s";
+    document.body.appendChild(c);
+    c.classList.add("go");
+    setTimeout(() => c.remove(), 7000);
+  }
+}
+
+// Goals we have already named. ESPN's summary feed runs BEHIND the scoreboard,
+// so on a fresh goal it often still lists only the previous one - which is why
+// the wrong scorer used to appear. We remember what we have seen and wait for a
+// genuinely new Arsenal goal id rather than trusting "the last one in the list".
+const seenGoals = new Set();
+
+async function arsenalGoals(m) {
+  const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.lg}/summary?event=${m.ev.id}`);
+  return (j.keyEvents || [])
+    .filter(e => /goal|penalty - scored/i.test(e.type?.text || ""))
+    .filter(e => !/own goal/i.test(e.type?.text || ""))
+    .filter(e => String(e.team?.id) === TEAM_ID);
+}
+
+// Record everything already scored, so the first poll cannot mistake an old goal
+// for a new one.
+async function seedSeenGoals(m) {
+  try { for (const g of await arsenalGoals(m)) seenGoals.add(String(g.id)); } catch (e) {}
+}
+
+// Poll until the new goal actually turns up in the feed (roughly 30s of grace).
+async function scorerName(m, tries = 10) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      const goals = await arsenalGoals(m);
+      const fresh = goals.filter(g => !seenGoals.has(String(g.id)));
+      if (fresh.length) {
+        const g = fresh[fresh.length - 1];
+        seenGoals.add(String(g.id));
+        const who = g.participants?.[0]?.athlete?.displayName || "";
+        const clock = g.clock?.displayValue || "";
+        return who ? `${who}  ${clock}` : clock;
+      }
+    } catch (e) {}
+    await new Promise(r => setTimeout(r, 3000));
+  }
+  return "";   // never name a player we are not sure about - "ARSENAL" is safer
+}
+
+async function celebrate(m) {
+  replay(document.getElementById("flash"));
+  replay(document.getElementById("goalwrap"));
+  confettiBurst();
+  document.getElementById("scorer").textContent = "ARSENAL";   // instant, then refined
+  const s = await scorerName(m);
+  if (s) document.getElementById("scorer").textContent = s;
+}
+
+function concededBanner(oppName) {
+  const el = document.getElementById("conceded");
+  el.textContent = `Goal — ${oppName}`;
+  replay(el);
+}
+
+async function tick() {
+  try {
+    matchRef = await findMatch();
+    if (matchRef) {
+      const comp = matchRef.ev.competitions[0];
+      const ars = comp.competitors.find(c => String(c.team?.id) === TEAM_ID);
+      const opp = comp.competitors.find(c => String(c.team?.id) !== TEAM_ID);
+      const a = parseInt(ars?.score ?? "0", 10), o = parseInt(opp?.score ?? "0", 10);
+      if (!firstPoll && arsScore !== null && a > arsScore) celebrate(matchRef);
+      if (!firstPoll && oppScore !== null && o > oppScore) concededBanner(opp?.team?.displayName || "Opponent");
+      if (firstPoll) await seedSeenGoals(matchRef);
+      arsScore = a; oppScore = o; firstPoll = false;
+    }
+  } catch (e) {}
+  const live = matchRef?.ev?.status?.type?.state === "in";
+  setTimeout(tick, live ? 12000 : 60000);
+}
+tick();
+
+// Preview mode: add ?test to the URL to replay the celebration every 10s
+if (location.search.includes("test")) {
+  const demo = () => { document.getElementById("scorer").textContent = "Saka  34'"; replay(document.getElementById("flash")); replay(document.getElementById("goalwrap")); confettiBurst(); };
+  setTimeout(demo, 800);
+  setInterval(demo, 10000);
+}
+</script>
+</body>
+</html>

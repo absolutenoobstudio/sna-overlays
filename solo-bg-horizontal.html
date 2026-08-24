@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+
+  /* Rebuilds the SNA background with ONE large centred camera window instead of two.
+     The original artwork is reused; the two old windows are covered with a clean slice
+     of the same artwork, feathered at the edges so there is no visible seam. */
+  #bg {
+    position: absolute; inset: 0;
+    background: url('sna_background_horizontal_frame.png') no-repeat 0 0;
+    background-size: 1920px 1080px;
+    /* cut the new window out of the layer: outer rect minus rounded rect (even-odd) */
+    -webkit-mask-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M0 0H1920V1080H0Z M364 200H1556A26 26 0 0 1 1582 226V874A26 26 0 0 1 1556 900H364A26 26 0 0 1 338 874V226A26 26 0 0 1 364 200Z'/%3E%3C/svg%3E");
+    -webkit-mask-size: 1920px 1080px;
+    -webkit-mask-repeat: no-repeat;
+  }
+
+  .patch {
+    position: absolute; overflow: hidden; display: flex;
+    filter: blur(1.2px);
+    /* feather all four edges so the patch melts into the real artwork */
+    -webkit-mask-image:
+      linear-gradient(to right,  transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+  .patch i {
+    display: block; width: 176px; height: 100%; flex: none;
+    background: url('sna_background_horizontal_frame.png') no-repeat;
+    background-size: 1920px 1080px;
+    background-position: -872px -249px;
+  }
+  /* the original art falls off towards the canvas edges - keep that shading */
+  .patch::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+  .patch.l::after { background: linear-gradient(to left,  rgba(8,3,6,0) 35%, rgba(8,3,6,.5) 100%); }
+  .patch.r::after { background: linear-gradient(to right, rgba(8,3,6,0) 35%, rgba(8,3,6,.5) 100%); }
+
+  /* gold frame around the new window, matching the original art */
+  #frame {
+    position: absolute; left: 330px; top: 192px; width: 1260px; height: 716px;
+    border: 8px solid #f4d99c; border-radius: 34px;
+    box-shadow: 0 0 26px rgba(244,217,156,.45), inset 0 0 18px rgba(244,217,156,.22);
+  }
+</style>
+</head>
+<body>
+  <div id="bg">
+    <div class="patch l" style="left:52px;   top:249px; width:832px; height:578px">
+      <i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div class="patch r" style="left:1036px; top:249px; width:832px; height:578px">
+      <i></i><i></i><i></i><i></i><i></i>
+    </div>
+  </div>
+  <div id="frame"></div>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  /* Everything paintable lives in .art, which is masked so the two camera
+     windows are punched clean through - the cameras sit behind this page. */
+  .art {
+    position: absolute; inset: 0;
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'><path fill='white' fill-rule='evenodd' d='M0 0H1920V1080H0Z M90 300H870V739H90Z M1050 300H1830V739H1050Z'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'><path fill='white' fill-rule='evenodd' d='M0 0H1920V1080H0Z M90 300H870V739H90Z M1050 300H1830V739H1050Z'/></svg>");
+    -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  }
+
+  /* base: cold charcoal, hostile red bloom top, a hint of green at the foot
+     because green is the good-news colour everywhere else in this scene */
+  .base {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(1200px 520px at 50% -6%, rgba(190,20,32,.36), transparent 62%),
+      radial-gradient(900px 420px at 50% 106%, rgba(40,170,90,.16), transparent 60%),
+      linear-gradient(180deg, #0d0c10 0%, #14090c 45%, #0a0a0d 100%);
+  }
+  /* hazard stripes down each edge */
+  .hazard {
+    position: absolute; top: 0; bottom: 0; width: 74px; opacity: .30;
+    background: repeating-linear-gradient(135deg, #c0121f 0 22px, transparent 22px 44px);
+    -webkit-mask-image: linear-gradient(180deg, transparent, black 18%, black 82%, transparent);
+    mask-image: linear-gradient(180deg, transparent, black 18%, black 82%, transparent);
+  }
+  .hazard.l { left: 0; } .hazard.r { right: 0; }
+
+  /* faint repeated watermark */
+  .marks {
+    position: absolute; inset: 0; opacity: .05; overflow: hidden;
+    display: flex; flex-wrap: wrap; align-content: flex-start; gap: 42px 70px;
+    padding: 40px 30px; transform: rotate(-8deg) scale(1.25); transform-origin: center;
+  }
+  .marks span { color: #fff; font-size: 40px; font-weight: 900; letter-spacing: 7px; white-space: nowrap; }
+
+  /* scanline texture */
+  .grain {
+    position: absolute; inset: 0; opacity: .5;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.020) 0 1px, transparent 1px 4px);
+  }
+
+  /* top banner behind the scorebug */
+  .banner {
+    position: absolute; left: 0; right: 0; top: 0; height: 258px;
+    background: linear-gradient(180deg, rgba(150,10,22,.55), rgba(12,6,8,0));
+    border-bottom: 1px solid rgba(255,90,96,.18);
+  }
+  .kicker {
+    position: absolute; left: 0; right: 0; top: 224px; text-align: center;
+    color: rgba(255,190,195,.55); font-size: 15px; font-weight: 900;
+    letter-spacing: 13px; text-transform: uppercase;
+  }
+
+  /* foot bar behind the mood strip */
+  .foot {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 190px;
+    background: linear-gradient(0deg, rgba(8,4,6,.92), rgba(8,4,6,0));
+  }
+  .rule { position: absolute; left: 60px; right: 60px; bottom: 178px; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(212,175,55,.55), transparent); }
+
+  /* window frames - deliberately NOT masked, so they draw around the holes */
+  .win {
+    position: absolute; border: 3px solid rgba(212,175,55,.85); border-radius: 26px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 18px 46px rgba(0,0,0,.55),
+                inset 0 0 30px rgba(0,0,0,.45);
+  }
+  .win.l { left: 90px; top: 300px; width: 780px; height: 439px; }
+  .win.r { left: 1050px; top: 300px; width: 780px; height: 439px; }
+  .corner { position: absolute; width: 34px; height: 34px; border: 3px solid #ff5a60; }
+  .corner.tl { left: -3px; top: -3px; border-right: 0; border-bottom: 0; border-radius: 26px 0 0 0; }
+  .corner.br { right: -3px; bottom: -3px; border-left: 0; border-top: 0; border-radius: 0 0 26px 0; }
+
+  .vs {
+    position: absolute; left: 870px; top: 300px; width: 180px; height: 439px;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,.10); font-size: 92px; font-weight: 900; letter-spacing: 2px;
+  }
+</style>
+</head>
+<body>
+  <div class="art">
+    <div class="base"></div>
+    <div class="marks" id="marks"></div>
+    <div class="hazard l"></div>
+    <div class="hazard r"></div>
+    <div class="banner"></div>
+    <div class="kicker">Rivals WatchAlong &middot; hoping for the worst</div>
+    <div class="foot"></div>
+    <div class="rule"></div>
+    <div class="grain"></div>
+  </div>
+
+  <div class="win l"><div class="corner tl"></div><div class="corner br"></div></div>
+  <div class="win r"><div class="corner tl"></div><div class="corner br"></div></div>
+  <div class="vs">VS</div>
+
+<script>
+  // fill the watermark layer
+  const m = document.getElementById("marks");
+  const words = ["HATE WATCH", "NOT OUR CLUB", "COME ON YOU EVERYONE ELSE", "HATE WATCH", "RIVALS WATCHALONG"];
+  let html = "";
+  for (let i = 0; i < 60; i++) html += `<span>${words[i % words.length]}</span>`;
+  m.innerHTML = html;
+</script>
+</body>
+</html>

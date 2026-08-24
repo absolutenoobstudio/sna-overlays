@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  /* Exactly the size a Collab Cam guest feed reports (1280x720), so this shows
+     precisely how a real guest will be framed. Temporary test source. */
+  html, body { width: 1280px; height: 720px; overflow: hidden; }
+  body {
+    background:
+      repeating-linear-gradient(0deg,  rgba(255,255,255,.07) 0 1px, transparent 1px 40px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 1px, transparent 1px 40px),
+      linear-gradient(135deg, #123, #245 40%, #1a3350);
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    position: relative;
+  }
+  .edge { position: absolute; inset: 0; border: 6px solid #00e5ff; }
+  .corner { position: absolute; width: 90px; height: 90px; border: 6px solid #ffd75e; }
+  .tl { top: 18px; left: 18px; border-right: none; border-bottom: none; }
+  .tr { top: 18px; right: 18px; border-left: none; border-bottom: none; }
+  .bl { bottom: 18px; left: 18px; border-right: none; border-top: none; }
+  .br { bottom: 18px; right: 18px; border-left: none; border-top: none; }
+  .mid {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    text-align: center; color: #fff;
+  }
+  .mid h1 { font-size: 72px; font-weight: 900; letter-spacing: 6px; }
+  .mid p { font-size: 26px; font-weight: 700; color: #9fd8ff; letter-spacing: 3px; margin-top: 6px; }
+  .cross { position: absolute; left: 50%; top: 50%; width: 160px; height: 160px; margin: -80px 0 0 -80px; }
+  .cross::before, .cross::after { content: ""; position: absolute; background: rgba(255,255,255,.5); }
+  .cross::before { left: 50%; top: 0; width: 2px; height: 100%; }
+  .cross::after { top: 50%; left: 0; height: 2px; width: 100%; }
+  .label { position: absolute; color: #ffd75e; font-size: 22px; font-weight: 800; letter-spacing: 2px; }
+  .lt { top: 26px; left: 130px; } .lb { bottom: 26px; left: 130px; }
+  .safe { position: absolute; inset: 60px; border: 3px dashed rgba(255,215,94,.55); }
+  .safe span { position: absolute; top: -30px; left: 0; color: rgba(255,215,94,.8); font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+  <div class="edge"></div>
+  <div class="safe"><span>IF THIS DASHED BOX IS CUT OFF, THE GUEST IS CROPPED</span></div>
+  <div class="corner tl"></div><div class="corner tr"></div>
+  <div class="corner bl"></div><div class="corner br"></div>
+  <div class="cross"></div>
+  <div class="mid"><h1>SAM</h1><p>TEST GUEST FEED — 1280 x 720</p></div>
+  <div class="label lt">TOP EDGE</div>
+  <div class="label lb">BOTTOM EDGE</div>
+</body>
+</html>

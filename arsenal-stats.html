@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; display: flex; align-items: center; justify-content: center; }
+
+  .panel {
+    width: 96%; height: 86%;
+    background: linear-gradient(180deg, rgba(20,6,10,.92), rgba(10,4,6,.92));
+    border: 1px solid rgba(212,175,55,.5);
+    border-radius: 16px;
+    display: flex; align-items: center; gap: 3%;
+    padding: 0 2.5%;
+    box-shadow: 0 6px 24px rgba(0,0,0,.55);
+    opacity: 0; transform: translateY(16px);
+    transition: opacity .6s, transform .6s;
+  }
+  .panel.show { opacity: 1; transform: translateY(0); }
+
+  .poss { flex: 1.5; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .poss .label-row { display: flex; justify-content: space-between; color: #e8dfd4; font-size: 15px; font-weight: 700; }
+  .poss .label-row .title { color: #9c8a95; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; align-self: center; }
+  .bar { height: 14px; border-radius: 999px; overflow: hidden; display: flex; background: rgba(255,255,255,.12); }
+  .bar .h { background: linear-gradient(90deg, #ef0107, #ff4d4d); width: 50%; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+  .bar .a { background: linear-gradient(90deg, #4d9fff, #2d6fd6); flex: 1; }
+
+  .stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .stat .vals { display: flex; gap: 10px; align-items: baseline; }
+  .stat .v { color: #fff; font-size: 26px; font-weight: 800; transition: color .3s; }
+  .stat .v.chg { animation: glow 1s; }
+  @keyframes glow { 40% { color: #ffd75e; transform: scale(1.25); } }
+  .stat .name { color: #9c8a95; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; white-space: nowrap; }
+  .divider { width: 1px; height: 55%; background: rgba(212,175,55,.3); }
+
+  /* pre-match countdown mode */
+  .count { flex: 1; display: flex; align-items: center; justify-content: center; gap: 18px; }
+  .count .cd { color: #fff; font-size: 34px; font-weight: 800; letter-spacing: 2px; }
+  .count .cd b { color: #ffd75e; }
+  .count .title { color: #9c8a95; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  .form { display: flex; gap: 5px; align-items: center; }
+  .form .lbl { color: #e8dfd4; font-weight: 800; font-size: 15px; margin-right: 4px; }
+  .chip { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 800; }
+  .chip.W { background: #1f9d55; } .chip.D { background: #8a8f98; } .chip.L { background: #d64545; }
+</style>
+</head>
+<body>
+  <div class="panel" id="panel"></div>
+
+<script>
+const TEAM_ID = "359";
+const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
+const panel = document.getElementById("panel");
+let matchRef = null, prev = {};
+
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+// Which Arsenal fixture should this overlay follow?
+// ESPN keeps old finished matches on the cup and European scoreboards long after
+// they are done, so anything that ended more than 36 hours ago is ignored - that
+// is what stops last season's result reappearing on stream. mode "finished"
+// wants the match just played, "current" wants the one being played or next up.
+// keepOld is set when a ?testdate= is in the URL, so testing with a past match
+// still works.
+function pickMatch(found, mode, keepOld) {
+  if (!found || !found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t  = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre  = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && (keepOld || now - t(m) < FRESH))
+                    .sort((a, b) => t(b) - t(a));
+  for (const g of (mode === "finished" ? [post, live, pre] : [live, pre, post]))
+    if (g.length) return g[0];
+  return null;
+}
+
+async function findMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        if (comp?.competitors?.some(c => String(c.team?.id) === TEAM_ID)) found.push({ lg, ev });
+      }
+    } catch (e) {}
+  }
+  return pickMatch(found, "current", false);
+}
+
+function chips(form) {
+  return (form || "").split("").map(c => `<span class="chip ${c}">${c}</span>`).join("");
+}
+
+function renderCountdown(m) {
+  const comp = m.ev.competitions[0];
+  const home = comp.competitors.find(c => c.homeAway === "home");
+  const away = comp.competitors.find(c => c.homeAway === "away");
+  const ko = new Date(m.ev.date) - Date.now();
+  let cd = "KICK-OFF!";
+  if (ko > 0) {
+    const d = Math.floor(ko / 864e5), h = Math.floor(ko % 864e5 / 36e5), mi = Math.floor(ko % 36e5 / 6e4), s = Math.floor(ko % 6e4 / 1e3);
+    cd = d > 0 ? `<b>${d}</b>d <b>${h}</b>h <b>${mi}</b>m` : `<b>${String(h).padStart(2,"0")}</b>:<b>${String(mi).padStart(2,"0")}</b>:<b>${String(s).padStart(2,"0")}</b>`;
+  }
+  panel.innerHTML = `
+    <div class="form"><span class="lbl">${home.team.abbreviation}</span>${chips(home.form)}</div>
+    <div class="divider"></div>
+    <div class="count"><span class="title">Kick-off in</span><span class="cd">${cd}</span></div>
+    <div class="divider"></div>
+    <div class="form"><span class="lbl">${away.team.abbreviation}</span>${chips(away.form)}</div>`;
+  panel.classList.add("show");
+}
+
+const WANT = [
+  ["totalShots", "Shots"],
+  ["shotsOnTarget", "On Target"],
+  ["wonCorners", "Corners"],
+  ["foulsCommitted", "Fouls"],
+];
+
+function statOf(stats, name) {
+  const s = (stats || []).find(x => x.name === name);
+  return s ? s.displayValue : "0";
+}
+
+function renderStats(m, box) {
+  const teams = box?.boxscore?.teams;
+  if (!teams || teams.length < 2) return;
+  const home = teams.find(t => t.homeAway === "home") ?? teams[0];
+  const away = teams.find(t => t.homeAway === "away") ?? teams[1];
+  const hPoss = parseFloat(statOf(home.statistics, "possessionPct")) || 50;
+
+  let html = `
+    <div class="poss">
+      <div class="label-row"><span id="pH">${Math.round(hPoss)}%</span><span class="title">Possession</span><span id="pA">${Math.round(100 - hPoss)}%</span></div>
+      <div class="bar"><div class="h" id="pBar" style="width:${hPoss}%"></div><div class="a"></div></div>
+    </div>`;
+  for (const [key, label] of WANT) {
+    const hv = statOf(home.statistics, key), av = statOf(away.statistics, key);
+    const chg = prev[key] && prev[key] !== hv + "|" + av ? "chg" : "";
+    prev[key] = hv + "|" + av;
+    html += `<div class="divider"></div>
+      <div class="stat"><div class="vals"><span class="v ${chg}">${hv}</span><span style="color:#9c8a95">·</span><span class="v ${chg}">${av}</span></div><span class="name">${label}</span></div>`;
+  }
+  panel.innerHTML = html;
+  panel.classList.add("show");
+}
+
+async function tick() {
+  try {
+    matchRef = await findMatch();
+    if (matchRef) {
+      const state = matchRef.ev.status?.type?.state;
+      if (state === "pre") {
+        renderCountdown(matchRef);
+      } else {
+        const box = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${matchRef.lg}/summary?event=${matchRef.ev.id}`);
+        renderStats(matchRef, box);
+      }
+    }
+  } catch (e) {}
+  const state = matchRef?.ev?.status?.type?.state;
+  setTimeout(tick, state === "in" ? 20000 : state === "pre" ? 1000 : 120000);
+}
+tick();
+</script>
+</body>
+</html>

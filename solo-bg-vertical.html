@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: transparent; }
+
+  /* Covers the unused LOWER camera window on the vertical background so a solo stream
+     doesn't show an empty box. The camera keeps the upper window.
+     Measured window bounds (from the PNG alpha): top y300-880, bottom y1040-1620, x100-980.
+     The patch tiles the full-width clean band that sits BETWEEN the two windows
+     (y912-1008, between the two windows gold borders), so there is no horizontal repetition. */
+  .patch {
+    position: absolute; overflow: hidden; display: flex; flex-direction: column;
+    filter: blur(1.1px);
+    -webkit-mask-image:
+      linear-gradient(to right,  transparent 0, #000 34px, #000 calc(100% - 34px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+  .patch i {
+    display: block; width: 100%; height: 96px; flex: none;
+    background: url('sna_background_vertical_frame.png') no-repeat;
+    background-size: 1080px 1920px;
+    background-position: -40px -912px;
+  }
+  /* the artwork darkens towards the bottom of the canvas - keep that falloff */
+  .patch::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(8,3,6,0) 0%, rgba(8,3,6,.42) 100%);
+  }
+</style>
+</head>
+<body>
+  <div class="patch" style="left:40px; top:960px; width:1000px; height:740px">
+    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+  </div>
+</body>
+</html>

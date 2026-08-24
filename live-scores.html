@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  .panel {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(18,5,8,.90), rgba(8,3,5,.94));
+    border: 1px solid rgba(212,175,55,.45); border-radius: 14px;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    opacity: 0; transition: opacity .7s;
+  }
+  .panel.show { opacity: 1; }
+
+  .head {
+    flex: 0 0 auto; display: flex; align-items: baseline; justify-content: space-between;
+    padding: 2.2% 5% 1.6%; border-bottom: 1px solid rgba(212,175,55,.28);
+  }
+  .head .t { color: #ffd75e; font-weight: 900; letter-spacing: .2em; text-transform: uppercase; }
+  .head .s { color: #9c8a95; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+  .head .s.on { color: #ff7b80; }
+  .head .s.on::before {
+    content: ""; display: inline-block; width: .62em; height: .62em; border-radius: 50%;
+    background: #ff3b3b; margin-right: .5em; animation: blink 1.3s infinite;
+  }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  .rows { flex: 1; display: flex; flex-direction: column; padding: 1.2% 3.5% 2%; min-height: 0; }
+  .row { flex: 1 1 0; display: flex; align-items: center; gap: 2%; padding: 0 1.5%;
+         border-radius: 5px; min-height: 0; }
+  .row + .row { border-top: 1px solid rgba(255,255,255,.045); }
+  .row.live { background: linear-gradient(90deg, rgba(239,1,7,.20), rgba(239,1,7,.02)); }
+
+  /* a goal just went in - flash the row so it is impossible to miss */
+  .row.goal { animation: goalflash 2.6s ease-out 1; }
+  @keyframes goalflash {
+    0%   { background: rgba(120,230,140,.55); }
+    18%  { background: rgba(120,230,140,.40); }
+    100% { background: rgba(239,1,7,.02); }
+  }
+  .row.goal .sc { animation: goalpop 2.6s ease-out 1; }
+  @keyframes goalpop {
+    0%, 12% { color: #8ef2a5; transform: scale(1.28); }
+    100%    { color: #ffd75e; transform: scale(1); }
+  }
+
+  .side { flex: 1; display: flex; align-items: center; gap: 6%; min-width: 0; }
+  .side.a { justify-content: flex-end; }
+  .side img { height: 58%; max-height: 24px; object-fit: contain; }
+  .side .ab { color: #fff; font-weight: 800; letter-spacing: .04em; white-space: nowrap; }
+  .sc { flex: 0 0 22%; text-align: center; color: #ffd75e; font-weight: 900; white-space: nowrap;
+        display: inline-block; }
+  .st { flex: 0 0 20%; text-align: right; color: #9c8a95; font-weight: 800; white-space: nowrap; }
+  .st.on { color: #ff7b80; }
+  .st.ht { color: #ffd75e; }
+
+  .msg { flex: 1; display: flex; align-items: center; justify-content: center;
+         color: #9c8a95; font-weight: 700; text-align: center; padding: 6%; }
+</style>
+</head>
+<body>
+  <div class="panel" id="panel">
+    <div class="head"><span class="t">Elsewhere</span><span class="s" id="sub">Live scores</span></div>
+    <div class="rows" id="rows"><div class="msg">Loading…</div></div>
+  </div>
+
+<script>
+const Q = new URLSearchParams(location.search);
+const MAX = parseInt(Q.get("max") || "10", 10);
+// the club being hate-watched is already in the scorebug, so leave its match out
+const RIVALS = ["360", "364", "363", "382", "367"];
+const MAIN = (Q.get("league") || "eng.1");
+const EXTRA = (Q.get("extra") || "esp.1,ger.1,ita.1,uefa.champions").split(",").filter(Boolean);
+
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+
+function autoSize(count) {
+  const h = window.innerHeight, w = window.innerWidth;
+  const rowH = (h * 0.80) / Math.max(count, 1);
+  const base = Math.max(9, Math.min(rowH * 0.44, w * 0.042));
+  document.querySelectorAll(".row").forEach(r => { r.style.fontSize = base + "px"; });
+  document.querySelector(".head .t").style.fontSize = Math.max(10, Math.min(h * 0.055, w * 0.05)) + "px";
+  $("sub").style.fontSize = Math.max(8, Math.min(h * 0.032, w * 0.03)) + "px";
+}
+
+/* Remember each match's score so we can tell when one CHANGES. Polling alone
+   only tells you the score, never that a goal just went in - and a goal you
+   don't notice is the whole point of a live scores panel. */
+const lastScore = new Map();      // eventId -> "2-1"
+const flashing = new Set();       // eventIds mid-flash, so a re-render keeps it
+
+function statusOf(ev) {
+  const t = ev.status?.type, state = t?.state;
+  if (state === "pre") {
+    return { txt: new Date(ev.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), cls: "" };
+  }
+  if (state === "post") return { txt: "FT", cls: "" };
+  // ESPN reports halftime as a live state with the clock parked on 45'
+  if (/half/i.test(t?.description || "") || /half/i.test(t?.shortDetail || "")) {
+    return { txt: "HT", cls: "ht" };
+  }
+  return { txt: ev.status?.displayClock || "LIVE", cls: "on" };
+}
+
+function eventRow(ev) {
+  const c = ev.competitions?.[0]?.competitors ?? [];
+  const home = c.find(x => x.homeAway === "home") || c[0];
+  const away = c.find(x => x.homeAway === "away") || c[1];
+  const state = ev.status?.type?.state;
+  const live = state === "in";
+  const pair = `${home?.score ?? 0}-${away?.score ?? 0}`;
+  const score = state === "pre" ? "v" : `${home?.score ?? 0} - ${away?.score ?? 0}`;
+  const s = statusOf(ev);
+
+  // did the score move since the last poll?
+  const prev = lastScore.get(ev.id);
+  if (state !== "pre") {
+    if (prev !== undefined && prev !== pair) flashing.add(ev.id);
+    lastScore.set(ev.id, pair);
+  }
+  const goal = flashing.has(ev.id);
+
+  return `<div class="row ${live ? "live" : ""} ${goal ? "goal" : ""}" data-id="${esc(ev.id)}">
+    <div class="side"><img src="${esc(home?.team?.logo || "")}" alt=""><span class="ab">${esc(home?.team?.abbreviation || "")}</span></div>
+    <div class="sc">${esc(score)}</div>
+    <div class="side a"><span class="ab">${esc(away?.team?.abbreviation || "")}</span><img src="${esc(away?.team?.logo || "")}" alt=""></div>
+    <div class="st ${live ? s.cls || "on" : ""}">${esc(s.txt)}</div>
+  </div>`;
+}
+
+// FLIP, same as the league table: a match kicking off jumps to the top of the
+// list, and you should see it travel there rather than teleport.
+function capturePositions() {
+  const m = new Map();
+  document.querySelectorAll(".row[data-id]").forEach(el => m.set(el.dataset.id, el.getBoundingClientRect().top));
+  return m;
+}
+function playMoves(before) {
+  document.querySelectorAll(".row[data-id]").forEach(el => {
+    const was = before.get(el.dataset.id);
+    if (was === undefined) {
+      if (before.size) {
+        el.style.transition = "none"; el.style.opacity = "0";
+        requestAnimationFrame(() => { el.style.transition = "opacity .6s"; el.style.opacity = ""; });
+      }
+      return;
+    }
+    const dy = was - el.getBoundingClientRect().top;
+    if (!dy) return;
+    el.style.transition = "none";
+    el.style.transform = `translateY(${dy}px)`;
+    requestAnimationFrame(() => {
+      el.style.transition = "transform .9s cubic-bezier(.2,.9,.25,1)";
+      el.style.transform = "";
+    });
+  });
+}
+
+async function render() {
+  const leagues = [MAIN, ...EXTRA];
+  // fetch every league at once - sequentially this was five round trips before
+  // the first row could be drawn
+  const feeds = await Promise.all(leagues.map(async (lg, i) => {
+    try { return { lg, i, j: await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`) }; }
+    catch (e) { return { lg, i, j: null }; }
+  }));
+
+  const seen = new Set();
+  const all = [];
+  for (const { lg, i, j } of feeds) {
+    for (const ev of (j?.events ?? [])) {
+      if (seen.has(ev.id)) continue;
+      const isRival = ev.competitions?.[0]?.competitors?.some(c => RIVALS.includes(String(c.team?.id)));
+      if (lg === MAIN && isRival) continue;         // already in the scorebug
+      seen.add(ev.id);
+      all.push({ ev, lgOrder: i });
+    }
+  }
+
+  // live first ACROSS ALL LEAGUES - previously each league was filled in turn,
+  // so finished home-league games could push out a live game elsewhere
+  const rank = e => e.ev.status?.type?.state === "in" ? 0 : e.ev.status?.type?.state === "pre" ? 1 : 2;
+  all.sort((a, b) => rank(a) - rank(b) || a.lgOrder - b.lgOrder || new Date(a.ev.date) - new Date(b.ev.date));
+
+  const shown = all.slice(0, MAX);
+  const liveCount = all.filter(e => rank(e) === 0).length;
+
+  const before = capturePositions();
+  $("rows").innerHTML = shown.length
+    ? shown.map(e => eventRow(e.ev)).join("")
+    : '<div class="msg">Nothing else on right now.</div>';
+  autoSize(shown.length || 1);
+  playMoves(before);
+
+  // let each flash play once, then clear it so the next poll does not repeat it
+  if (flashing.size) setTimeout(() => flashing.clear(), 2600);
+
+  $("sub").textContent = liveCount ? `${liveCount} live` : "Today";
+  $("sub").classList.toggle("on", liveCount > 0);
+  $("panel").classList.add("show");
+
+  clearTimeout(render._t);
+  render._t = setTimeout(render, liveCount ? 20000 : 60000);
+}
+
+render();
+addEventListener("resize", () => autoSize(document.querySelectorAll(".row").length));
+</script>
+</body>
+</html>

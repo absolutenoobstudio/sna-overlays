@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; position: relative; }
+
+  .live-badge {
+    position: absolute; top: 42px; right: 48px;
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(10, 12, 24, .72);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 999px; padding: 14px 30px 14px 24px;
+    backdrop-filter: blur(8px);
+  }
+  .live-dot {
+    width: 16px; height: 16px; border-radius: 50%; background: #ff3b5c;
+    box-shadow: 0 0 0 0 rgba(255,59,92,.6);
+    animation: ping 1.6s ease-out infinite;
+  }
+  @keyframes ping {
+    0%   { box-shadow: 0 0 0 0 rgba(255,59,92,.6); }
+    100% { box-shadow: 0 0 0 16px rgba(255,59,92,0); }
+  }
+  .live-badge span {
+    color: #fff; font-weight: 800; font-size: 26px; letter-spacing: 4px;
+  }
+
+  .lower-third {
+    position: absolute; left: 48px; bottom: 48px;
+    display: flex; flex-direction: column; gap: 0;
+    animation: slidein .8s cubic-bezier(.2,.9,.3,1) both;
+  }
+  @keyframes slidein {
+    from { transform: translateX(-40px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+  .name-pill {
+    display: inline-flex; align-items: center; gap: 16px;
+    background: rgba(10, 12, 24, .72);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 20px; padding: 18px 34px;
+    backdrop-filter: blur(8px);
+    width: max-content;
+  }
+  .accent-bar {
+    width: 8px; height: 44px; border-radius: 4px;
+    background: linear-gradient(180deg, #22d3ee, #7c5cff);
+  }
+  .name-block { display: flex; flex-direction: column; }
+  .name {
+    color: #fff; font-size: 34px; font-weight: 800; letter-spacing: 1px; line-height: 1.15;
+  }
+  .tagline {
+    color: #9aa3c0; font-size: 20px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <div class="live-badge"><div class="live-dot"></div><span>LIVE</span></div>
+  <div class="lower-third">
+    <div class="name-pill">
+      <div class="accent-bar"></div>
+      <div class="name-block">
+        <div class="name">AbsoluteNoob</div>
+        <div class="tagline">Live on YouTube &amp; TikTok</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

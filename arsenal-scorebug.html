@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; }
+
+  .bug {
+    margin-top: 6px;
+    display: flex; align-items: stretch;
+    background: linear-gradient(180deg, rgba(20,6,10,.92), rgba(10,4,6,.92));
+    border: 1px solid rgba(212,175,55,.55);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 6px 24px rgba(0,0,0,.55);
+    opacity: 0; transform: translateY(-20px);
+    transition: opacity .6s, transform .6s;
+  }
+  .bug.show { opacity: 1; transform: translateY(0); }
+
+  .team { display: flex; align-items: center; gap: 10px; padding: 10px 18px; }
+  .team img { width: 46px; height: 46px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
+  .team .abbr { color: #fff; font-size: 30px; font-weight: 800; letter-spacing: 1px; }
+
+  .score {
+    display: flex; align-items: center; gap: 10px; padding: 0 18px;
+    background: rgba(239,1,7,.18);
+    border-left: 1px solid rgba(212,175,55,.35);
+    border-right: 1px solid rgba(212,175,55,.35);
+  }
+  .score .num {
+    color: #fff; font-size: 40px; font-weight: 800; min-width: 34px; text-align: center;
+    transition: transform .3s;
+  }
+  .score .num.bump { animation: bump .8s; }
+  @keyframes bump { 30% { transform: scale(1.6); color: #ffd75e; } }
+  .score .sep { color: #d4af37; font-size: 30px; font-weight: 700; }
+  .score .vs { color: #d4af37; font-size: 26px; font-weight: 800; letter-spacing: 2px; padding: 0 4px; }
+
+  .meta { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 18px 8px 14px; min-width: 110px; }
+  .clock { color: #ffd75e; font-size: 22px; font-weight: 800; }
+  .clock.live::before {
+    content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: #ff3b5c; margin-right: 7px; animation: blink 1.4s infinite;
+  }
+  @keyframes blink { 50% { opacity: .2; } }
+  .comp { color: #9c8a95; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+  .eventline {
+    margin-top: 6px; max-width: 92vw;
+    background: rgba(10,4,6,.85);
+    border: 1px solid rgba(212,175,55,.3);
+    border-radius: 999px; padding: 5px 20px;
+    color: #e8dfd4; font-size: 16px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0; transform: translateY(-8px);
+    transition: opacity .5s, transform .5s;
+  }
+  .eventline.show { opacity: 1; transform: translateY(0); }
+  .eventline .ico { margin-right: 8px; }
+</style>
+</head>
+<body>
+  <div class="bug" id="bug">
+    <div class="team"><img id="hLogo" alt=""><span class="abbr" id="hAbbr">---</span></div>
+    <div class="score" id="scoreBox">
+      <span class="num" id="hScore">-</span><span class="sep">–</span><span class="num" id="aScore">-</span>
+    </div>
+    <div class="team"><span class="abbr" id="aAbbr">---</span><img id="aLogo" alt=""></div>
+    <div class="meta"><span class="clock" id="clock">…</span><span class="comp" id="comp"></span></div>
+  </div>
+  <div class="eventline" id="eventline"></div>
+
+<script>
+const TEAM_ID = "359";
+const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
+const $ = (id) => document.getElementById(id);
+let matchRef = null, lastH = null, lastA = null, lastEventText = "";
+
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+// Which Arsenal fixture should this overlay follow?
+// ESPN keeps old finished matches on the cup and European scoreboards long after
+// they are done, so anything that ended more than 36 hours ago is ignored - that
+// is what stops last season's result reappearing on stream. mode "finished"
+// wants the match just played, "current" wants the one being played or next up.
+// keepOld is set when a ?testdate= is in the URL, so testing with a past match
+// still works.
+function pickMatch(found, mode, keepOld) {
+  if (!found || !found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t  = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre  = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && (keepOld || now - t(m) < FRESH))
+                    .sort((a, b) => t(b) - t(a));
+  for (const g of (mode === "finished" ? [post, live, pre] : [live, pre, post]))
+    if (g.length) return g[0];
+  return null;
+}
+
+
+// ESPN gives status.displayClock as minutes ("90'+5'") but also status.clock as
+// seconds (5400). Render a proper MM:SS from the seconds, keeping any stoppage
+// time on the end.
+function matchClock(st) {
+  const secs = Number(st?.clock);
+  if (!isFinite(secs) || secs <= 0) return st?.displayClock || "";
+  const mm = Math.floor(secs / 60), ss = Math.floor(secs % 60);
+  const base = String(mm).padStart(2, "0") + ":" + String(ss).padStart(2, "0");
+  const extra = /\+\s*(\d+)/.exec(st?.displayClock || "");
+  return extra ? base + " +" + extra[1] : base;
+}
+
+async function findMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      const compName = j.leagues?.[0]?.abbreviation || lg;
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        if (comp?.competitors?.some(c => String(c.team?.id) === TEAM_ID)) found.push({ lg, ev, compName });
+      }
+    } catch (e) {}
+  }
+  return pickMatch(found, "current", false);
+}
+
+function fmtKickoff(d) {
+  const dt = new Date(d);
+  const day = dt.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+  const time = dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `${day} ${time}`;
+}
+
+function render(m) {
+  const comp = m.ev.competitions[0];
+  const home = comp.competitors.find(c => c.homeAway === "home");
+  const away = comp.competitors.find(c => c.homeAway === "away");
+  const state = m.ev.status?.type?.state;
+
+  $("hLogo").src = home.team.logo || "";
+  $("aLogo").src = away.team.logo || "";
+  $("hAbbr").textContent = home.team.abbreviation || home.team.shortDisplayName;
+  $("aAbbr").textContent = away.team.abbreviation || away.team.shortDisplayName;
+  $("comp").textContent = m.compName;
+
+  const box = $("scoreBox");
+  if (state === "pre") {
+    box.innerHTML = '<span class="vs">VS</span>';
+    $("clock").textContent = fmtKickoff(m.ev.date);
+    $("clock").classList.remove("live");
+    setEvent("🏟 " + (comp.venue?.fullName || "") + (home.form ? ` — form: ${home.team.abbreviation} ${home.form} · ${away.team.abbreviation} ${away.form || ""}` : ""));
+  } else {
+    if (!$("hScore")) box.innerHTML = '<span class="num" id="hScore">-</span><span class="sep">–</span><span class="num" id="aScore">-</span>';
+    const hs = home.score ?? "-", as = away.score ?? "-";
+    if (lastH !== null && hs !== lastH) { $("hScore").classList.remove("bump"); void $("hScore").offsetWidth; $("hScore").classList.add("bump"); }
+    if (lastA !== null && as !== lastA) { $("aScore").classList.remove("bump"); void $("aScore").offsetWidth; $("aScore").classList.add("bump"); }
+    $("hScore").textContent = hs; $("aScore").textContent = as;
+    lastH = hs; lastA = as;
+    const st = m.ev.status;
+    if (state === "in") {
+      $("clock").textContent = matchClock(st);
+      $("clock").classList.add("live");
+    } else {
+      $("clock").textContent = st.type?.description === "Full Time" ? "FT" : (st.type?.shortDetail || "FT");
+      $("clock").classList.remove("live");
+    }
+  }
+  $("bug").classList.add("show");
+}
+
+function setEvent(text) {
+  if (!text || text === lastEventText) return;
+  lastEventText = text;
+  const el = $("eventline");
+  el.classList.remove("show"); void el.offsetWidth;
+  el.textContent = text;
+  el.classList.add("show");
+}
+
+const EV_ICON = { "Goal": "⚽", "Own Goal": "⚽", "Penalty - Scored": "⚽", "Yellow Card": "🟨", "Red Card": "🟥", "Substitution": "🔁", "Penalty - Missed": "❌" };
+async function updateEvents(m) {
+  try {
+    const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.lg}/summary?event=${m.ev.id}`);
+    const evs = j.keyEvents || [];
+    if (!evs.length) return;
+    const last = evs[evs.length - 1];
+    const t = last.type?.text || "";
+    const ico = EV_ICON[t] || "•";
+    const who = last.participants?.[0]?.athlete?.displayName || "";
+    const teamName = last.team?.displayName || "";
+    const clock = last.clock?.displayValue || "";
+    setEvent(`${ico} ${clock} ${t}${who ? " — " + who : ""}${teamName ? " (" + teamName + ")" : ""}`);
+  } catch (e) {}
+}
+
+async function tick() {
+  try {
+    matchRef = await findMatch();
+    if (matchRef) {
+      render(matchRef);
+      if (matchRef.ev.status?.type?.state !== "pre") await updateEvents(matchRef);
+    } else {
+      $("clock").textContent = "No fixture";
+    }
+  } catch (e) {}
+  const live = matchRef?.ev?.status?.type?.state === "in";
+  setTimeout(tick, live ? 15000 : 120000);
+}
+tick();
+</script>
+</body>
+</html>

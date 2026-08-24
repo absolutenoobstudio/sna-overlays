@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  .art {
+    position: absolute; inset: 0;
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920'><path fill='white' fill-rule='evenodd' d='M0 0H1080V1920H0Z M40 700H1040V1263H40Z'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920'><path fill='white' fill-rule='evenodd' d='M0 0H1080V1920H0Z M40 700H1040V1263H40Z'/></svg>");
+    -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  }
+
+  .base {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(900px 660px at 50% -4%, rgba(190,20,32,.4), transparent 62%),
+      radial-gradient(820px 580px at 50% 104%, rgba(40,170,90,.16), transparent 60%),
+      linear-gradient(180deg, #0d0c10 0%, #14090c 48%, #0a0a0d 100%);
+  }
+  .wedge {
+    position: absolute; left: -40px; right: -40px; height: 300px; opacity: .45;
+    background: linear-gradient(180deg, rgba(176,16,28,.5), rgba(120,8,18,0));
+  }
+  .wedge.t { top: 250px; clip-path: polygon(0 0, 100% 18%, 100% 100%, 0 82%); }
+  .wedge.b { top: 1210px; clip-path: polygon(0 18%, 100% 0, 100% 82%, 0 100%); }
+
+  .hazard {
+    position: absolute; left: 0; right: 0; height: 58px; opacity: .28;
+    background: repeating-linear-gradient(135deg, #c0121f 0 20px, transparent 20px 40px);
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 15%, black 85%, transparent);
+    mask-image: linear-gradient(90deg, transparent, black 15%, black 85%, transparent);
+  }
+  .hazard.t { top: 300px; } .hazard.b { bottom: 300px; }
+
+  .marks {
+    position: absolute; inset: 0; opacity: .055; overflow: hidden;
+    display: flex; flex-wrap: wrap; align-content: flex-start; gap: 40px 62px;
+    padding: 24px; transform: rotate(-8deg) scale(1.35); transform-origin: center;
+  }
+  .marks span { color: #fff; font-size: 34px; font-weight: 900; letter-spacing: 6px; white-space: nowrap; }
+
+  .grain { position: absolute; inset: 0; opacity: .5;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 4px); }
+
+  .banner {
+    position: absolute; left: 0; right: 0; top: 0; height: 290px;
+    background: linear-gradient(180deg, rgba(150,10,22,.58), rgba(12,6,8,0));
+    border-bottom: 1px solid rgba(255,90,96,.2);
+  }
+  .kicker {
+    position: absolute; left: 0; right: 0; top: 1281px; text-align: center;
+    color: rgba(255,190,195,.5); font-size: 16px; font-weight: 900;
+    letter-spacing: 11px; text-transform: uppercase;
+  }
+  .foot { position: absolute; left: 0; right: 0; bottom: 0; height: 320px;
+    background: linear-gradient(0deg, rgba(8,4,6,.93), rgba(8,4,6,0)); }
+
+  .win {
+    position: absolute; left: 40px; top: 700px; width: 1000px; height: 563px;
+    border: 4px solid rgba(212,175,55,.9); border-radius: 8px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 26px 60px rgba(0,0,0,.6),
+                inset 0 0 40px rgba(0,0,0,.5);
+  }
+  .bracket { position: absolute; width: 52px; height: 52px; border: 5px solid #ff5a60; }
+  .bracket.tl { left: -5px;  top: -5px;    border-right: 0; border-bottom: 0; }
+  .bracket.tr { right: -5px; top: -5px;    border-left: 0;  border-bottom: 0; }
+  .bracket.bl { left: -5px;  bottom: -5px; border-right: 0; border-top: 0; }
+  .bracket.br { right: -5px; bottom: -5px; border-left: 0;  border-top: 0; }
+
+  .rail { position: absolute; height: 3px; left: 40px; width: 1000px;
+    background: linear-gradient(90deg, transparent, rgba(255,90,96,.75), transparent); }
+  .rail.t { top: 686px; } .rail.b { top: 1271px; }
+</style>
+</head>
+<body>
+  <div class="art">
+    <div class="base"></div>
+    <div class="marks" id="marks"></div>
+    <div class="wedge t"></div>
+    <div class="wedge b"></div>
+    <div class="banner"></div>
+    <div class="hazard t"></div>
+    <div class="hazard b"></div>
+    <div class="kicker">Rivals WatchAlong</div>
+    <div class="foot"></div>
+    <div class="grain"></div>
+  </div>
+
+  <div class="rail t"></div>
+  <div class="rail b"></div>
+  <div class="win">
+    <div class="bracket tl"></div><div class="bracket tr"></div>
+    <div class="bracket bl"></div><div class="bracket br"></div>
+  </div>
+
+<script>
+  const words = ["HATE WATCH", "NOT OUR CLUB", "RIVALS WATCHALONG"];
+  let html = "";
+  for (let i = 0; i < 70; i++) html += `<span>${words[i % words.length]}</span>`;
+  document.getElementById("marks").innerHTML = html;
+</script>
+</body>
+</html>

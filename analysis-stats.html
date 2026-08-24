@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  /* background lives on a real element - a <body> background propagates to the
+     root canvas, which OBS renders transparent */
+  .bgfill {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(1000px 700px at 12% 8%, rgba(239,1,7,.16), transparent 60%),
+      radial-gradient(900px 700px at 90% 92%, rgba(212,175,55,.10), transparent 60%),
+      #120508;
+  }
+  .texture { position: absolute; inset: 0; z-index: 1;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,.014) 0 2px, transparent 2px 14px); }
+
+  .title { position: absolute; top: 66px; left: 60px; z-index: 3;
+    color: #ffd75e; font-size: 42px; font-weight: 900; letter-spacing: 8px; }
+  .sub { position: absolute; top: 122px; left: 62px; z-index: 3;
+    color: #9c8a95; font-size: 15px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; }
+
+  /* score strip, top right */
+  .score { position: absolute; top: 60px; right: 60px; z-index: 3;
+    display: flex; align-items: center; gap: 18px;
+    background: linear-gradient(180deg, rgba(20,6,10,.9), rgba(10,4,6,.9));
+    border: 1px solid rgba(212,175,55,.45); border-radius: 14px; padding: 12px 22px; }
+  .score img { width: 44px; height: 44px; object-fit: contain; }
+  .score .ab { color: #fff; font-size: 26px; font-weight: 800; letter-spacing: 1px; }
+  .score .sc { color: #ffd75e; font-size: 34px; font-weight: 900; }
+  .score .st { color: #9c8a95; font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-left: 8px; }
+
+  /* the stat area - left column is left clear for cameras */
+  .zone { position: absolute; left: 620px; top: 210px; width: 1250px; bottom: 120px; z-index: 3; }
+
+  .row { display: flex; align-items: center; gap: 22px; margin-bottom: 26px; }
+  .row .lbl { flex: 0 0 300px; text-align: center; color: #9c8a95;
+    font-size: 15px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; }
+  .row .v { flex: 0 0 120px; color: #fff; font-size: 34px; font-weight: 900; }
+  .row .v.r { text-align: right; }
+  .row .v.win { color: #ffd75e; }
+  .bar { flex: 1; height: 16px; border-radius: 999px; overflow: hidden; display: flex;
+    background: rgba(255,255,255,.10); }
+  .bar .h { background: linear-gradient(90deg, #ef0107, #ff5a60); transition: width 1s cubic-bezier(.4,0,.2,1); }
+  .bar .a { background: linear-gradient(90deg, #4d9fff, #2d6fd6); flex: 1; }
+
+  /* timeline page */
+  .tl { height: 100%; overflow: hidden; }
+  .ev { display: flex; align-items: center; gap: 18px; padding: 11px 0;
+    border-bottom: 1px solid rgba(212,175,55,.14); }
+  .ev .clk { flex: 0 0 92px; color: #ffd75e; font-size: 22px; font-weight: 900; }
+  .ev .ico { flex: 0 0 34px; font-size: 22px; text-align: center; }
+  .ev .who { flex: 1; color: #fff; font-size: 23px; font-weight: 700; }
+  .ev .tm { color: #9c8a95; font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+
+  .foot { position: absolute; left: 620px; bottom: 60px; z-index: 3;
+    color: #9c8a95; font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  .none { color: #9c8a95; font-size: 22px; font-weight: 700; padding-top: 40px; }
+</style>
+</head>
+<body>
+  <div class="bgfill"></div>
+  <div class="texture"></div>
+  <div class="title" id="pageTitle">OVERVIEW</div>
+  <div class="sub" id="pageSub">Match statistics</div>
+  <div class="score" id="scoreStrip"></div>
+  <div class="zone" id="zone"></div>
+  <div class="foot" id="foot"></div>
+
+<script>
+const TEAM_ID = "359";
+const LEAGUES = ["eng.1", "uefa.champions", "uefa.europa", "eng.fa", "eng.league_cup"];
+const Q = new URLSearchParams(location.search);
+const PAGE = (Q.get("page") || "overview").toLowerCase();
+const DATES = Q.get("testdate");
+
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+function pickMatch(found, mode, keepOld) {
+  if (!found || !found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && (keepOld || now - t(m) < FRESH))
+                    .sort((a, b) => t(b) - t(a));
+  for (const g of (mode === "finished" ? [post, live, pre] : [live, pre, post])) if (g.length) return g[0];
+  return null;
+}
+
+async function findMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard${DATES ? "?dates=" + DATES : ""}`);
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        if (comp?.competitors?.some(c => String(c.team?.id) === TEAM_ID))
+          found.push({ lg, ev, comp });
+      }
+    } catch (e) {}
+  }
+  // prefer the match just played - that is what you will be analysing
+  return pickMatch(found, "finished", !!DATES);
+}
+
+const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+const num = v => (v === undefined || v === null || v === "") ? "0" : String(v);
+
+function stat(team, name) {
+  const s = (team?.statistics ?? []).find(x => x.name === name);
+  return s ? (s.displayValue ?? s.value) : null;
+}
+const asNum = v => { const n = parseFloat(String(v ?? "").replace("%", "")); return isFinite(n) ? n : 0; };
+
+// one comparison row with a proportional bar
+function row(label, us, them, opts = {}) {
+  const a = asNum(us), b = asNum(them);
+  const total = a + b;
+  const pct = total > 0 ? (a / total) * 100 : 50;
+  const usWin = opts.lowerIsBetter ? (a < b) : (a > b);
+  const themWin = opts.lowerIsBetter ? (b < a) : (b > a);
+  return `<div class="row">
+    <div class="v ${usWin ? "win" : ""}">${esc(num(us))}${opts.suffix || ""}</div>
+    <div class="bar"><div class="h" style="width:${pct}%"></div><div class="a"></div></div>
+    <div class="lbl">${esc(label)}</div>
+    <div class="v r ${themWin ? "win" : ""}">${esc(num(them))}${opts.suffix || ""}</div>
+  </div>`;
+}
+
+const PAGES = {
+  overview: {
+    title: "OVERVIEW", sub: "The headline numbers",
+    rows: [
+      ["Possession", "possessionPct", { suffix: "%" }],
+      ["Total shots", "totalShots"],
+      ["Shots on target", "shotsOnTarget"],
+      ["Corners", "wonCorners"],
+      ["Fouls", "foulsCommitted", { lowerIsBetter: true }],
+      ["Yellow cards", "yellowCards", { lowerIsBetter: true }],
+      ["Offsides", "offsides", { lowerIsBetter: true }],
+    ],
+  },
+  attack: {
+    title: "ATTACK", sub: "Getting forward",
+    rows: [
+      ["Total shots", "totalShots"],
+      ["On target", "shotsOnTarget"],
+      ["Blocked", "blockedShots"],
+      ["Corners won", "wonCorners"],
+      ["Crosses", "totalCrosses"],
+      ["Accurate crosses", "accurateCrosses"],
+      ["Offsides", "offsides", { lowerIsBetter: true }],
+    ],
+  },
+  passing: {
+    title: "PASSING", sub: "Keeping the ball",
+    rows: [
+      ["Possession", "possessionPct", { suffix: "%" }],
+      ["Total passes", "totalPasses"],
+      ["Accurate passes", "accuratePasses"],
+      ["Long balls", "totalLongBalls"],
+      ["Accurate long balls", "accurateLongBalls"],
+      ["Crosses", "totalCrosses"],
+      ["Accurate crosses", "accurateCrosses"],
+    ],
+  },
+  defending: {
+    title: "DEFENDING", sub: "Out of possession",
+    rows: [
+      ["Tackles", "totalTackles"],
+      ["Tackles won", "effectiveTackles"],
+      ["Interceptions", "interceptions"],
+      ["Clearances", "totalClearance"],
+      ["Blocked shots", "blockedShots"],
+      ["Saves", "saves"],
+      ["Fouls conceded", "foulsCommitted", { lowerIsBetter: true }],
+    ],
+  },
+};
+
+function renderScore(m, us, them) {
+  const st = m.ev.status?.type;
+  const label = st?.state === "in" ? (m.ev.status?.displayClock || "LIVE")
+              : st?.state === "post" ? "Full time" : "Kick-off soon";
+  document.getElementById("scoreStrip").innerHTML =
+    `<img src="${esc(us.team?.logo || "")}" alt=""><span class="ab">${esc(us.team?.abbreviation || "")}</span>
+     <span class="sc">${esc(us.score ?? 0)} - ${esc(them.score ?? 0)}</span>
+     <span class="ab">${esc(them.team?.abbreviation || "")}</span><img src="${esc(them.team?.logo || "")}" alt="">
+     <span class="st">${esc(label)}</span>`;
+}
+
+async function renderTimeline(m) {
+  const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.lg}/summary?event=${m.ev.id}`);
+  const ev = (j.keyEvents || []).slice().reverse();
+  const icon = t => /goal|scored/i.test(t) ? "&#9917;"
+              : /yellow/i.test(t) ? "&#128993;"
+              : /red/i.test(t) ? "&#128308;"
+              : /substitut/i.test(t) ? "&#8646;" : "&#8226;";
+  const rows = ev.slice(0, 13).map(e => {
+    const who = e.participants?.[0]?.athlete?.displayName || e.text || "";
+    const team = e.team?.id === TEAM_ID ? "ARS" : "";
+    return `<div class="ev"><div class="clk">${esc(e.clock?.displayValue || "")}</div>
+      <div class="ico">${icon(e.type?.text || "")}</div>
+      <div class="who">${esc(who)}</div><div class="tm">${esc(team || (e.team?.abbreviation ?? ""))}</div></div>`;
+  }).join("");
+  document.getElementById("zone").innerHTML =
+    `<div class="tl">${rows || '<div class="none">No match events yet.</div>'}</div>`;
+}
+
+async function render() {
+  const m = await findMatch();
+  if (!m) {
+    document.getElementById("zone").innerHTML = '<div class="none">No Arsenal match to analyse right now.</div>';
+    return;
+  }
+  const us = m.comp.competitors.find(c => String(c.team?.id) === TEAM_ID);
+  const them = m.comp.competitors.find(c => String(c.team?.id) !== TEAM_ID);
+  renderScore(m, us, them);
+  document.getElementById("foot").textContent =
+    `${us.team?.displayName ?? ""} v ${them.team?.displayName ?? ""}`;
+
+  if (PAGE === "timeline") {
+    document.getElementById("pageTitle").textContent = "TIMELINE";
+    document.getElementById("pageSub").textContent = "How it unfolded";
+    return renderTimeline(m);
+  }
+
+  const spec = PAGES[PAGE] || PAGES.overview;
+  document.getElementById("pageTitle").textContent = spec.title;
+  document.getElementById("pageSub").textContent = spec.sub;
+
+  // team statistics live on the summary endpoint, not the scoreboard
+  let tUs = null, tThem = null;
+  try {
+    const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.lg}/summary?event=${m.ev.id}`);
+    const teams = j.boxscore?.teams || [];
+    tUs = teams.find(t => String(t.team?.id) === TEAM_ID);
+    tThem = teams.find(t => String(t.team?.id) !== TEAM_ID);
+  } catch (e) {}
+
+  if (!tUs) {
+    document.getElementById("zone").innerHTML =
+      '<div class="none">Detailed stats appear once the match kicks off.</div>';
+    return;
+  }
+  document.getElementById("zone").innerHTML =
+    spec.rows.map(([label, key, opts]) => row(label, stat(tUs, key), stat(tThem, key), opts || {})).join("");
+}
+
+render();
+setInterval(render, 30000);
+</script>
+</body>
+</html>

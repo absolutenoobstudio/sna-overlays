@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --accent1: #7c5cff;
+    --accent2: #22d3ee;
+    --bg: #0b0e1a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; }
+  body {
+    background: var(--bg);
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .bg {
+    position: absolute; inset: -20%;
+    background:
+      radial-gradient(750px 600px at 45% 8%, rgba(255, 77, 141, .18), transparent 65%),
+      radial-gradient(800px 650px at 88% 88%, rgba(124, 92, 255, .32), transparent 65%),
+      radial-gradient(700px 600px at 8% 85%, rgba(34, 211, 238, .26), transparent 65%),
+      #0b0e1a;
+    animation: sway 21s ease-in-out infinite alternate;
+  }
+  @keyframes sway {
+    from { transform: translate(0,0) scale(1); }
+    to   { transform: translate(-55px, 35px) scale(1.05); }
+  }
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);
+  }
+  .stack { position: relative; text-align: center; z-index: 2; }
+  h1 {
+    font-size: 130px; font-weight: 800; letter-spacing: 5px; text-transform: uppercase;
+    background: linear-gradient(90deg, var(--accent2), #ff4d8d, var(--accent1), var(--accent2));
+    background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: shimmer 7s linear infinite;
+  }
+  @keyframes shimmer { to { background-position: 300% 0; } }
+  .sub {
+    margin-top: 32px; color: #9aa3c0; font-size: 36px; font-weight: 500; letter-spacing: 2px;
+  }
+  .sub b { color: #e6e9f8; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="vignette"></div>
+  <div class="stack">
+    <h1>Thanks for Watching</h1>
+    <div class="sub">follow <b>@AbsoluteNoob</b> — see you next stream</div>
+  </div>
+</body>
+</html>

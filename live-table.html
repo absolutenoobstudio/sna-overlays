@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  /* Everything is sized from the panel itself, so the same file works in a tall
+     narrow column (widescreen) and a short wide strip (vertical). */
+  .panel {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(18,5,8,.90), rgba(8,3,5,.94));
+    border: 1px solid rgba(212,175,55,.45); border-radius: 14px;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    opacity: 0; transition: opacity .7s;
+  }
+  .panel.show { opacity: 1; }
+
+  .head {
+    flex: 0 0 auto; display: flex; align-items: baseline; justify-content: space-between;
+    padding: 2.2% 5% 1.6%;
+    border-bottom: 1px solid rgba(212,175,55,.28);
+  }
+  .head .t { color: #ffd75e; font-weight: 900; letter-spacing: .22em; text-transform: uppercase; }
+  .head .s { color: #9c8a95; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+  .head .s.live { color: #ff7b80; }
+  .head .s.live::before {
+    content: ""; display: inline-block; width: .62em; height: .62em; border-radius: 50%;
+    background: #ff3b3b; margin-right: .5em; vertical-align: baseline;
+    animation: blink 1.3s infinite;
+  }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  .rows { flex: 1; display: flex; flex-direction: column; padding: 1.2% 3.5% 2%; min-height: 0; }
+  .row {
+    flex: 1 1 0; display: flex; align-items: center; gap: 2.5%;
+    padding: 0 1.5%; border-radius: 5px; min-height: 0;
+  }
+  .row + .row { border-top: 1px solid rgba(255,255,255,.045); }
+  .row.us   { background: linear-gradient(90deg, rgba(239,1,7,.30), rgba(239,1,7,.04)); }
+  .row.them { background: linear-gradient(90deg, rgba(120,230,140,.16), rgba(120,230,140,.02)); }
+  /* a team whose match is being counted live */
+  .row.playing { box-shadow: inset 0 0 0 1px rgba(255,215,94,.35); }
+
+  .rk  { flex: 0 0 9%;  color: #9c8a95; font-weight: 900; text-align: right; }
+  .mv  { flex: 0 0 6%;  font-weight: 900; text-align: center; font-size: .78em; }
+  .mv.up   { color: #8ef2a5; }
+  .mv.down { color: #ff7b80; }
+  .mv.same { color: transparent; }
+  .cr  { flex: 0 0 auto; display: flex; align-items: center; }
+  .cr img { height: 62%; max-height: 26px; object-fit: contain; }
+  .nm  { flex: 1; color: #fff; font-weight: 800; letter-spacing: .04em;
+         white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nm .dot {
+    display: inline-block; width: .5em; height: .5em; border-radius: 50%;
+    background: #ff3b3b; margin-left: .45em; animation: blink 1.3s infinite;
+  }
+  .pl  { flex: 0 0 11%; color: #9c8a95; font-weight: 700; text-align: right; }
+  .gd  { flex: 0 0 13%; color: #cfc6ce; font-weight: 700; text-align: right; }
+  .pts { flex: 0 0 14%; color: #ffd75e; font-weight: 900; text-align: right; }
+  .row.playing .pts { color: #fff3c4; }
+
+  .msg { flex: 1; display: flex; align-items: center; justify-content: center;
+         color: #9c8a95; font-weight: 700; text-align: center; padding: 6%; }
+</style>
+</head>
+<body>
+  <div class="panel" id="panel">
+    <div class="head"><span class="t" id="title">League Table</span><span class="s" id="sub">Loading</span></div>
+    <div class="rows" id="rows"><div class="msg">Loading…</div></div>
+  </div>
+
+<script src="live-core.js"></script>
+<script>
+const Q = new URLSearchParams(location.search);
+const LEAGUE = Q.get("league") || "eng.1";
+const OURS = Q.get("us") || "359";                 // Arsenal, highlighted red
+const HILITE = (Q.get("hilite") || "").split(",").filter(Boolean);  // extra ids, green
+const LIMIT = parseInt(Q.get("limit") || "20", 10);
+
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+
+// scale the type to the panel so it never overflows
+function autoSize(count) {
+  const h = window.innerHeight, w = window.innerWidth;
+  const rowH = (h * 0.80) / Math.max(count, 1);
+  const base = Math.max(9, Math.min(rowH * 0.46, w * 0.045));
+  document.querySelectorAll(".row").forEach(r => { r.style.fontSize = base + "px"; });
+  $("title").style.fontSize = Math.max(10, Math.min(h * 0.055, w * 0.052)) + "px";
+  $("sub").style.fontSize = Math.max(8, Math.min(h * 0.032, w * 0.032)) + "px";
+}
+
+/* The live league table now lives in live-core.js, shared by this file,
+   halftime-board.html and vertical-ht-board.html. If that file is ever missing
+   we degrade to the plain official table rather than break on stream. */
+async function tableRows(lg) {
+  if (window.LiveCore) return window.LiveCore.liveStandings(lg);
+  const j = await jget(`https://site.api.espn.com/apis/v2/sports/soccer/${lg}/standings`);
+  const entries = j.children?.[0]?.standings?.entries ?? j.standings?.entries ?? [];
+  const n = (e, k) => {
+    const s = (e.stats ?? []).find(x => x.name === k);
+    const v = parseInt(s?.displayValue ?? s?.value ?? "0", 10);
+    return isFinite(v) ? v : 0;
+  };
+  const rows = entries.map((e, i) => {
+    const t = e.team ?? {};
+    const gf = n(e, "pointsFor"), ga = n(e, "pointsAgainst");
+    return {
+      id: String(t.id), name: t.shortDisplayName ?? t.displayName ?? "",
+      logo: t.logos?.[0]?.href ?? "", pl: n(e, "gamesPlayed"),
+      gf, ga, gd: gf - ga, pts: n(e, "points"), rank: n(e, "rank"),
+      playing: false, pos: i + 1, shift: 0,
+    };
+  });
+  return { rows, inPlay: 0, degraded: true };
+}
+
+// FLIP: remember where every row is, so after re-sorting we can animate each
+// team from its old slot to its new one. This is the bit that lets you actually
+// SEE a team climb the table rather than just find it somewhere else.
+function capturePositions() {
+  const m = new Map();
+  document.querySelectorAll(".row[data-id]").forEach(el => {
+    m.set(el.dataset.id, el.getBoundingClientRect().top);
+  });
+  return m;
+}
+function playMoves(before) {
+  document.querySelectorAll(".row[data-id]").forEach(el => {
+    const was = before.get(el.dataset.id);
+    if (was === undefined) {
+      // A new arrival - e.g. a team climbing into a top-6 view. It has no old
+      // slot to travel from, so fade it in rather than let it pop.
+      if (before.size) {
+        el.style.transition = "none";
+        el.style.opacity = "0";
+        requestAnimationFrame(() => { el.style.transition = "opacity .6s"; el.style.opacity = ""; });
+      }
+      return;
+    }
+    const dy = was - el.getBoundingClientRect().top;
+    if (!dy) return;
+    el.style.transition = "none";
+    el.style.transform = `translateY(${dy}px)`;
+    requestAnimationFrame(() => {
+      el.style.transition = "transform .9s cubic-bezier(.2,.9,.25,1)";
+      el.style.transform = "";
+    });
+  });
+}
+
+async function render() {
+  try {
+    const { rows, inPlay } = await tableRows(LEAGUE);
+    if (!rows.length) { $("rows").innerHTML = '<div class="msg">No standings available yet.</div>'; return; }
+
+    const before = capturePositions();
+
+    const html = rows.slice(0, LIMIT).map(t => {
+      const mvCls = t.shift > 0 ? "up" : t.shift < 0 ? "down" : "same";
+      const mvTxt = t.shift > 0 ? "\u25b2" : t.shift < 0 ? "\u25bc" : "\u00b7";
+      const cls = [t.id === OURS ? "us" : HILITE.includes(t.id) ? "them" : "",
+                   t.playing ? "playing" : ""].filter(Boolean).join(" ");
+      return `<div class="row ${cls}" data-id="${esc(t.id)}">
+        <div class="rk">${t.pos}</div>
+        <div class="mv ${mvCls}">${mvTxt}</div>
+        <div class="cr"><img src="${esc(t.logo)}" alt=""></div>
+        <div class="nm">${esc(t.name)}${t.playing ? '<span class="dot"></span>' : ""}</div>
+        <div class="pl">${t.pl}</div>
+        <div class="gd">${t.gd > 0 ? "+" + t.gd : t.gd}</div>
+        <div class="pts">${t.pts}</div>
+      </div>`;
+    }).join("");
+
+    $("rows").innerHTML = html;
+    autoSize(Math.min(rows.length, LIMIT));
+    playMoves(before);
+
+    $("sub").textContent = inPlay ? `Live \u00b7 ${inPlay} in play` : "Official";
+    $("sub").classList.toggle("live", inPlay > 0);
+    $("panel").classList.add("show");
+
+    // poll harder while something is actually happening
+    clearTimeout(render._t);
+    render._t = setTimeout(render, inPlay ? 20000 : 60000);
+  } catch (e) {
+    $("rows").innerHTML = '<div class="msg">Table unavailable.</div>';
+    $("panel").classList.add("show");
+    clearTimeout(render._t);
+    render._t = setTimeout(render, 60000);
+  }
+}
+
+render();
+addEventListener("resize", () => autoSize(document.querySelectorAll(".row").length));
+</script>
+</body>
+</html>
