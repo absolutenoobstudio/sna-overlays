@@ -206,5 +206,28 @@ if (location.search.includes("test")) {
   setInterval(demo, 10000);
 }
 </script>
+<script>
+/* ?fit - scale this fixed-size design to fill whatever box the source is given,
+   keeping its proportions so nothing is stretched. Without ?fit the page renders
+   at its natural size, which is what Streamlabs uses - so adding this changes
+   nothing there. TikTok LIVE Studio is portrait-only and its sources are tall
+   boxes, which this design would otherwise sit in a corner of. */
+(function () {
+  if (!new URLSearchParams(location.search).has("fit")) return;
+  var DW = 1920, DH = 1080;
+  function fit() {
+    var s = Math.min(window.innerWidth / DW, window.innerHeight / DH);
+    var b = document.body;
+    b.style.width = DW + "px";
+    b.style.height = DH + "px";
+    b.style.transformOrigin = "top left";
+    b.style.transform = "translate(" + ((window.innerWidth - DW * s) / 2) + "px,"
+                      + ((window.innerHeight - DH * s) / 2) + "px) scale(" + s + ")";
+  }
+  window.addEventListener("resize", fit);
+  window.addEventListener("DOMContentLoaded", fit);
+  fit();
+})();
+</script>
 </body>
 </html>
