@@ -163,15 +163,19 @@ async function findMatch() {
    in the header. */
 function depth(pos) {
   const p = (pos || "").toUpperCase();
+  if (!p) return 30;
   if (p.startsWith("G")) return 0;
-  if (/^(CD|CB|SW)/.test(p)) return 10;
-  if (/^(LB|RB|WB|LWB|RWB)/.test(p)) return 12;
+  // DM before the defender test, or "DM" is caught by the bare "D"
   if (/^(DM|CDM)/.test(p)) return 20;
-  if (/^(CM|M)/.test(p)) return 30;
+  if (/^(LB|RB|WB|LWB|RWB)/.test(p)) return 12;
+  // Bare "D" matters: before kick-off ESPN publishes only G/D/M/F, and without
+  // it every defender fell through to the midfield default and got shuffled in
+  // among the midfielders.
+  if (/^(CD|CB|SW|D)/.test(p)) return 10;
   if (/^(AM|CAM)/.test(p)) return 40;
   if (/W/.test(p)) return 45;
   if (/^(F|ST|CF|S)/.test(p)) return 50;
-  return 30;
+  return 30;                                   // "M", "CM" and anything unknown
 }
 
 // left-to-right ordering within a line, from the position code

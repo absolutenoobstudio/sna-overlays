@@ -244,7 +244,21 @@ function renderLineups(rosters) {
   const rAway = rosters.find(r => r !== rHome);
   if (!rHome?.roster?.length || !rAway?.roster?.length) return false;
 
-  const sortP = (a, b) => (parseInt(a.formationPlace) || 99) - (parseInt(b.formationPlace) || 99);
+  /* Order back-to-front by POSITION first. ESPN's formationPlace is shirt
+     numbering, not a row index, so on its own it put a centre back in midfield
+     and a forward behind a midfielder. Before kick-off the only position data
+     is the coarse G/D/M/F, which is exactly what we need here; formationPlace
+     just breaks ties within a band. */
+  const band = p => {
+    const c = (p.position?.abbreviation || "").toUpperCase();
+    if (c.startsWith("G")) return 0;
+    if (/^(DM|CDM)/.test(c)) return 2;          // holding mid, ahead of the back line
+    if (/^(D|CD|CB|LB|RB|WB|SW)/.test(c)) return 1;
+    if (/^(F|ST|CF|W)/.test(c)) return 4;
+    return 3;                                    // midfield
+  };
+  const sortP = (a, b) => (band(a) - band(b))
+    || ((parseInt(a.formationPlace) || 99) - (parseInt(b.formationPlace) || 99));
   const startersH = rHome.roster.filter(p => p.starter).sort(sortP);
   const startersA = rAway.roster.filter(p => p.starter).sort(sortP);
   const subsH = rHome.roster.filter(p => !p.starter);
@@ -259,12 +273,12 @@ function renderLineups(rosters) {
   let html = "";
   startersH.forEach((p, i) => {
     const { x, yFrac } = posH[i];
-    const y = 93 - yFrac * 41;           // bottom half: 93% -> 52%
+    const y = 95 - yFrac * 38;           // bottom half: 95% -> 57%
     html += playerHTML(p, homeIsArs ? "ars" : "opp", x, y, i * 110);
   });
   startersA.forEach((p, i) => {
     const { x, yFrac } = posA[i];
-    const y = 7 + yFrac * 41;            // top half: 7% -> 48%
+    const y = 5 + yFrac * 38;            // top half: 5% -> 43%
     html += playerHTML(p, homeIsArs ? "opp" : "ars", 100 - x, y, 1250 + i * 110);
   });
   $("players").innerHTML = html;
