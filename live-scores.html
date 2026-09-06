@@ -72,10 +72,14 @@
 <script>
 const Q = new URLSearchParams(location.search);
 const MAX = parseInt(Q.get("max") || "10", 10);
-// the club being hate-watched is already in the scorebug, so leave its match out
-const RIVALS = ["360", "364", "363", "382", "367"];
-const MAIN = (Q.get("league") || "eng.1");
-const EXTRA = (Q.get("extra") || "esp.1,ger.1,ita.1,uefa.champions").split(",").filter(Boolean);
+const RIVALS = ["360", "364", "363", "382", "367"];   // big six minus Arsenal
+const FOLLOW = Q.get("follow") || "359";              // whose competition to show (359 = Arsenal)
+const RIVAL_MODE = Q.has("rival");                    // or: whichever big-six rival is on
+const FORCE_LEAGUE = Q.get("league");                 // or: pin one competition
+// Every competition the followed team could turn up in. We only ever DISPLAY
+// one of these - whichever they are actually in right now.
+const LEAGUES = (Q.get("search") || "eng.1,uefa.champions,uefa.europa,eng.fa,eng.league_cup")
+                  .split(",").filter(Boolean);
 
 async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
 const $ = id => document.getElementById(id);
@@ -166,39 +170,66 @@ function playMoves(before) {
   });
 }
 
+/* Which competition is the followed team in RIGHT NOW? Their own fixture
+   decides it, so a Champions League night shows the other European ties rather
+   than a league nobody asked about. Live beats upcoming beats just-finished. */
+function whoWeFollow(ev) {
+  const ids = (ev.competitions?.[0]?.competitors ?? []).map(c => String(c.team?.id));
+  return RIVAL_MODE ? ids.some(i => RIVALS.includes(i)) : ids.includes(FOLLOW);
+}
+
+async function pickCompetition(feeds) {
+  if (FORCE_LEAGUE) return { lg: FORCE_LEAGUE, ourMatch: null };
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const cands = [];
+  for (const { lg, j } of feeds) {
+    for (const ev of (j?.events ?? [])) {
+      if (!whoWeFollow(ev)) continue;
+      const st = ev.status?.type?.state;
+      const age = now - new Date(ev.date).getTime();
+      if (st === "post" && age > FRESH) continue;      // stale cup tie
+      cands.push({ lg, ev, rank: st === "in" ? 0 : st === "pre" ? 1 : 2, t: new Date(ev.date).getTime() });
+    }
+  }
+  if (!cands.length) return { lg: null, ourMatch: null };
+  cands.sort((a, b) => a.rank - b.rank || (a.rank === 2 ? b.t - a.t : a.t - b.t));
+  return { lg: cands[0].lg, ourMatch: cands[0].ev };
+}
+
 async function render() {
-  const leagues = [MAIN, ...EXTRA];
-  // fetch every league at once - sequentially this was five round trips before
-  // the first row could be drawn
-  const feeds = await Promise.all(leagues.map(async (lg, i) => {
-    try { return { lg, i, j: await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`) }; }
-    catch (e) { return { lg, i, j: null }; }
+  // one round trip per competition, all at once
+  const feeds = await Promise.all(LEAGUES.map(async lg => {
+    try { return { lg, j: await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`) }; }
+    catch (e) { return { lg, j: null }; }
   }));
 
-  const seen = new Set();
+  const { lg: COMP, ourMatch } = await pickCompetition(feeds);
+  const feed = feeds.find(f => f.lg === COMP);
+  const compName = feed?.j?.leagues?.[0]?.abbreviation
+                || feed?.j?.leagues?.[0]?.name || "";
+
   const all = [];
-  for (const { lg, i, j } of feeds) {
-    for (const ev of (j?.events ?? [])) {
-      if (seen.has(ev.id)) continue;
-      const isRival = ev.competitions?.[0]?.competitors?.some(c => RIVALS.includes(String(c.team?.id)));
-      if (lg === MAIN && isRival) continue;         // already in the scorebug
-      seen.add(ev.id);
-      all.push({ ev, lgOrder: i });
+  if (feed) {
+    for (const ev of (feed.j?.events ?? [])) {
+      // leave out the match being watched - it is already in the scorebug
+      if (ourMatch && ev.id === ourMatch.id) continue;
+      if (!ourMatch && whoWeFollow(ev)) continue;
+      all.push({ ev, lgOrder: 0 });
     }
   }
 
-  // live first ACROSS ALL LEAGUES - previously each league was filled in turn,
-  // so finished home-league games could push out a live game elsewhere
   const rank = e => e.ev.status?.type?.state === "in" ? 0 : e.ev.status?.type?.state === "pre" ? 1 : 2;
-  all.sort((a, b) => rank(a) - rank(b) || a.lgOrder - b.lgOrder || new Date(a.ev.date) - new Date(b.ev.date));
+  all.sort((a, b) => rank(a) - rank(b) || new Date(a.ev.date) - new Date(b.ev.date));
 
   const shown = all.slice(0, MAX);
   const liveCount = all.filter(e => rank(e) === 0).length;
+  // name the competition in the header so it is obvious what you are looking at
+  document.querySelector(".head .t").textContent = compName || "Elsewhere";
 
   const before = capturePositions();
   $("rows").innerHTML = shown.length
     ? shown.map(e => eventRow(e.ev)).join("")
-    : '<div class="msg">Nothing else on right now.</div>';
+    : `<div class="msg">${COMP ? "No other fixtures in this round." : "Nothing on right now."}</div>`;
   autoSize(shown.length || 1);
   playMoves(before);
 
