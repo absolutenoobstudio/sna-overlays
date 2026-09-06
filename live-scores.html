@@ -102,8 +102,11 @@ function statusOf(ev) {
     return { txt: new Date(ev.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), cls: "" };
   }
   if (state === "post") return { txt: "FT", cls: "" };
-  // ESPN reports halftime as a live state with the clock parked on 45'
-  if (/half/i.test(t?.description || "") || /half/i.test(t?.shortDetail || "")) {
+  // Half-time is a live state with the clock parked on 45. Match the STATUS
+  // name, not the word "half" - ESPN's description reads "First Half" and
+  // "Second Half" during normal play, which a /half/ test also matched, so
+  // every live game showed HT instead of its clock.
+  if (t?.name === "STATUS_HALFTIME" || /^half[- ]?time$/i.test(t?.description || "")) {
     return { txt: "HT", cls: "ht" };
   }
   return { txt: ev.status?.displayClock || "LIVE", cls: "on" };

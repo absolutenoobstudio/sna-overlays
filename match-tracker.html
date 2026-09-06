@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  /* Sized entirely from the panel, so the same file works as a tall column on
+     the widescreen canvas and as a wide block on the vertical one. */
+  .panel {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(18,5,8,.92), rgba(8,3,5,.95));
+    border: 1px solid rgba(212,175,55,.45); border-radius: 14px;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    opacity: 0; transition: opacity .7s;
+  }
+  .panel.show { opacity: 1; }
+
+  /* ---------- header: teams, score, clock ---------- */
+  .head {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 3%;
+    padding: 2.4% 4% 2%; border-bottom: 1px solid rgba(212,175,55,.28);
+  }
+  .side { display: flex; align-items: center; gap: .5em; min-width: 0; flex: 1; }
+  .side.b { justify-content: flex-end; }
+  .side img { height: 1.9em; width: 1.9em; object-fit: contain; }
+  .side .ab { color: #fff; font-weight: 900; letter-spacing: .04em; white-space: nowrap; }
+  .sc { color: #ffd75e; font-weight: 900; letter-spacing: .06em; white-space: nowrap; }
+  .clock {
+    flex: 0 0 auto; color: #9c8a95; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; white-space: nowrap; margin-left: 3%;
+  }
+  .clock.live { color: #ff7b80; }
+  .clock.live::before {
+    content: ""; display: inline-block; width: .55em; height: .55em; border-radius: 50%;
+    background: #ff3b3b; margin-right: .45em; animation: blink 1.3s infinite;
+  }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  /* ---------- stat bars ---------- */
+  .stats { flex: 0 0 auto; padding: 2.2% 4% 1.6%; display: flex; flex-direction: column; gap: .55em; }
+  .srow { display: flex; align-items: center; gap: .6em; }
+  .srow .v { color: #fff; font-weight: 800; min-width: 2.6em; text-align: center; }
+  .srow .v.win { color: #ffd75e; }
+  .srow .mid { flex: 1; display: flex; flex-direction: column; gap: .18em; }
+  .srow .nm {
+    color: #9c8a95; font-weight: 800; letter-spacing: .12em;
+    text-transform: uppercase; text-align: center; font-size: .62em;
+  }
+  .track { height: .42em; border-radius: 999px; background: rgba(255,255,255,.10); display: flex; overflow: hidden; }
+  .track .a { background: linear-gradient(90deg, #ef0107, #ff5a60); transition: width 1s cubic-bezier(.4,0,.2,1); }
+  .track .b { background: linear-gradient(90deg, #4d9fff, #7cc0ff); transition: width 1s cubic-bezier(.4,0,.2,1); }
+
+  /* ---------- commentary feed ---------- */
+  .feedwrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .feedhead {
+    flex: 0 0 auto; color: #ffd75e; font-weight: 900; letter-spacing: .18em;
+    text-transform: uppercase; padding: 1.4% 4% .8%; font-size: .72em;
+    border-top: 1px solid rgba(212,175,55,.2);
+  }
+  .feed { flex: 1; min-height: 0; overflow: hidden; padding: 0 4% 2.4%; }
+  .line {
+    display: flex; gap: .7em; padding: .42em 0;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+  }
+  .line .t { flex: 0 0 3.2em; color: #ffd75e; font-weight: 900; text-align: right; }
+  .line .x { flex: 1; color: #e8dfd4; font-weight: 600; line-height: 1.25; }
+
+  /* event colouring - the eye should find goals and cards instantly */
+  .line.goal  .x { color: #fff; font-weight: 900; }
+  .line.goal  .t { color: #8ef2a5; }
+  .line.card  .t { color: #ff7b80; }
+  .line.card  .x { color: #ffd3d5; }
+  .line.sub   .x { color: #9c8a95; }
+  .line.shot  .x { color: #cfd6ff; }
+  .line.dull  .x { color: #a99ba4; }
+
+  /* a line that has just arrived */
+  .line.fresh { animation: arrive 2.4s ease-out 1; }
+  @keyframes arrive {
+    0%   { background: rgba(255,215,94,.28); transform: translateX(-6px); }
+    100% { background: transparent; transform: none; }
+  }
+
+  .msg { flex: 1; display: flex; align-items: center; justify-content: center;
+         color: #9c8a95; font-weight: 700; text-align: center; padding: 6%; }
+</style>
+</head>
+<body>
+  <div class="panel" id="panel">
+    <div class="head">
+      <div class="side a"><img id="logoA" alt=""><span class="ab" id="abA">—</span></div>
+      <div class="sc" id="score">0 - 0</div>
+      <div class="side b"><span class="ab" id="abB">—</span><img id="logoB" alt=""></div>
+      <div class="clock" id="clock">—</div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="feedwrap">
+      <div class="feedhead">Commentary</div>
+      <div class="feed" id="feed"><div class="msg">Loading…</div></div>
+    </div>
+  </div>
+
+<script>
+/* Live match tracker: running commentary + key stats, straight from ESPN's
+   summary feed.
+
+   Deliberately NOT here: the animated pitch with "Dangerous Attack" /
+   "Throw-in" that bookmaker trackers show. That comes from a scout feed - a
+   person at the ground tapping events in - and is a paid B2B product from
+   Sportradar or Statscore. ESPN's `plays` array is empty for soccer, so there
+   is no honest way to draw it. Better to show real data well than fake it. */
+
+const Q = new URLSearchParams(location.search);
+const TEAM = Q.get("team") || "359";                 // who to follow (359 = Arsenal)
+const RIVAL_MODE = Q.has("rival");                   // or: whichever big-six rival is on
+const FORCE_ID = Q.get("id");                        // or: one specific fixture
+const MAX = parseInt(Q.get("max") || "9", 10);       // commentary lines to show
+const RIVALS = ["360", "364", "363", "382", "367"];  // big six minus Arsenal
+const LEAGUES = ["eng.1", "uefa.champions", "uefa.europa", "eng.fa", "eng.league_cup"];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+// scale everything off the panel so it fits whatever box it is given
+function autoSize() {
+  const h = window.innerHeight, w = window.innerWidth;
+  const base = Math.max(10, Math.min(h * 0.030, w * 0.030));
+  $("panel").style.fontSize = base + "px";
+  $("feed").style.fontSize = Math.max(9, base * 0.86) + "px";
+  $("score").style.fontSize = (base * 1.35) + "px";
+  document.querySelectorAll(".side .ab").forEach(e => e.style.fontSize = (base * 1.1) + "px");
+}
+
+function pickMatch(found) {
+  if (!found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state;
+  const t = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && now - t(m) < FRESH).sort((a, b) => t(b) - t(a));
+  for (const g of [live, pre, post]) if (g.length) return g[0];
+  return null;
+}
+
+async function findMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      for (const ev of j.events ?? []) {
+        const comp = ev.competitions?.[0];
+        const ids = (comp?.competitors ?? []).map(c => String(c.team?.id));
+        const hit = FORCE_ID ? ev.id === FORCE_ID
+                  : RIVAL_MODE ? ids.some(i => RIVALS.includes(i))
+                  : ids.includes(TEAM);
+        if (hit) found.push({ lg, ev, comp });
+      }
+    } catch (e) {}
+  }
+  return pickMatch(found);
+}
+
+function statOf(team, name) {
+  const s = (team?.statistics ?? []).find(x => x.name === name);
+  const v = parseFloat(s?.displayValue ?? s?.value ?? "");
+  return isFinite(v) ? v : 0;
+}
+
+const STATS = [
+  ["possessionPct", "Possession", true],
+  ["totalShots", "Shots", false],
+  ["shotsOnTarget", "On target", false],
+  ["wonCorners", "Corners", false],
+];
+
+function renderStats(tA, tB) {
+  $("stats").innerHTML = STATS.map(([key, label]) => {
+    const a = statOf(tA, key), b = statOf(tB, key);
+    const tot = a + b;
+    const pa = tot ? (a / tot * 100) : 50;
+    return `<div class="srow">
+      <span class="v ${a > b ? "win" : ""}">${a}</span>
+      <span class="mid">
+        <span class="nm">${esc(label)}</span>
+        <span class="track"><span class="a" style="width:${pa}%"></span><span class="b" style="width:${100 - pa}%"></span></span>
+      </span>
+      <span class="v ${b > a ? "win" : ""}">${b}</span>
+    </div>`;
+  }).join("");
+}
+
+// classify a commentary line so goals and cards stand out at a glance
+function classOf(text) {
+  const t = text.toLowerCase();
+  if (/^goal!|penalty is converted|own goal/.test(t)) return "goal";
+  if (/yellow card|red card|is shown a|second yellow/.test(t)) return "card";
+  if (/substitution/.test(t)) return "sub";
+  if (/attempt|shot|save|blocked|post|crossbar/.test(t)) return "shot";
+  if (/foul|offside|corner|throw|free kick|delay|hand ball/.test(t)) return "dull";
+  return "";
+}
+
+let seenMax = -1;      // highest sequence we have already shown
+let firstPass = true;
+
+function renderFeed(commentary) {
+  const list = (commentary ?? []).slice().sort((a, b) => (b.sequence ?? 0) - (a.sequence ?? 0));
+  if (!list.length) { $("feed").innerHTML = '<div class="msg">No commentary yet.</div>'; return; }
+  const top = list.slice(0, MAX);
+  $("feed").innerHTML = top.map(c => {
+    const seq = c.sequence ?? 0;
+    // only flash lines that arrived since the last poll, never on first load
+    const fresh = !firstPass && seq > seenMax;
+    const clk = c.time?.displayValue || "";
+    return `<div class="line ${classOf(c.text || "")} ${fresh ? "fresh" : ""}">
+      <span class="t">${esc(clk)}</span><span class="x">${esc(c.text || "")}</span>
+    </div>`;
+  }).join("");
+  seenMax = Math.max(seenMax, ...list.map(c => c.sequence ?? 0));
+  firstPass = false;
+
+  // Commentary lines wrap to different heights, so a fixed count either leaves
+  // a gap or clips the last line mid-sentence. Drop whole lines from the bottom
+  // until what is left actually fits the box.
+  const box = $("feed");
+  let guard = 40;
+  while (box.scrollHeight > box.clientHeight && box.children.length > 1 && guard--) {
+    box.removeChild(box.lastElementChild);
+  }
+}
+
+async function tick() {
+  let m = null;
+  try { m = await findMatch(); } catch (e) {}
+  if (!m) {
+    $("feed").innerHTML = '<div class="msg">No match on right now.</div>';
+    $("stats").innerHTML = "";
+    $("clock").textContent = "—";
+    $("clock").classList.remove("live");
+    $("panel").classList.add("show");
+    autoSize();
+    return setTimeout(tick, 60000);
+  }
+
+  const cs = m.comp.competitors ?? [];
+  const home = cs.find(c => c.homeAway === "home") || cs[0];
+  const away = cs.find(c => c.homeAway === "away") || cs[1];
+  const state = m.ev.status?.type?.state;
+
+  $("logoA").src = home?.team?.logo || "";
+  $("logoB").src = away?.team?.logo || "";
+  $("abA").textContent = home?.team?.abbreviation || "";
+  $("abB").textContent = away?.team?.abbreviation || "";
+  $("score").textContent = state === "pre" ? "vs" : `${home?.score ?? 0} - ${away?.score ?? 0}`;
+
+  const live = state === "in";
+  const desc = m.ev.status?.type?.shortDetail || "";
+  $("clock").textContent = state === "pre"
+      ? new Date(m.ev.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : state === "post" ? "FT"
+      : (m.ev.status?.type?.name === "STATUS_HALFTIME" ? "HT" : (m.ev.status?.displayClock || desc));
+  $("clock").classList.toggle("live", live);
+
+  try {
+    const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.lg}/summary?event=${m.ev.id}`);
+    const teams = j.boxscore?.teams ?? [];
+    const tA = teams.find(t => String(t.team?.id) === String(home?.team?.id));
+    const tB = teams.find(t => String(t.team?.id) === String(away?.team?.id));
+    if (tA && tB) renderStats(tA, tB); else $("stats").innerHTML = "";
+    renderFeed(j.commentary);
+  } catch (e) {
+    $("feed").innerHTML = '<div class="msg">Commentary unavailable.</div>';
+  }
+
+  autoSize();
+  $("panel").classList.add("show");
+  setTimeout(tick, live ? 20000 : 60000);
+}
+
+addEventListener("resize", autoSize);
+tick();
+</script>
+</body>
+</html>
