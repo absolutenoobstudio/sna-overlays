@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  .panel {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(18,5,8,.92), rgba(8,3,5,.95));
+    border: 1px solid rgba(212,175,55,.45); border-radius: 14px;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    opacity: 0; transition: opacity .7s;
+  }
+  .panel.show { opacity: 1; }
+
+  .head {
+    flex: 0 0 auto; display: flex; align-items: center; gap: .6em;
+    padding: 2.4% 4% 1.8%; border-bottom: 1px solid rgba(212,175,55,.28);
+  }
+  .head img { height: 1.7em; width: 1.7em; object-fit: contain; }
+  .head .t { color: #ffd75e; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+  .head .f { margin-left: auto; color: #fff; font-weight: 900; letter-spacing: .1em; }
+
+  /* the pitch - drawn in CSS so it scales cleanly and needs no image */
+  .pitch {
+    flex: 1; position: relative; margin: 2.5% 4% 3%;
+    border-radius: 10px; overflow: hidden;
+    background:
+      repeating-linear-gradient(180deg, rgba(255,255,255,.028) 0 6%, transparent 6% 12%),
+      linear-gradient(180deg, #0e2a16, #0a1f11);
+    border: 1px solid rgba(255,255,255,.13);
+  }
+  /* markings */
+  .pitch::before {          /* halfway line */
+    content: ""; position: absolute; left: 0; right: 0; top: 50%;
+    border-top: 1px solid rgba(255,255,255,.16);
+  }
+  .circle {
+    position: absolute; left: 50%; top: 50%; width: 26%; aspect-ratio: 1;
+    transform: translate(-50%, -50%); border: 1px solid rgba(255,255,255,.16);
+    border-radius: 50%;
+  }
+  .box {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: 52%; height: 15%; border: 1px solid rgba(255,255,255,.16);
+  }
+  .box.b { bottom: -1px; border-bottom: 0; }
+  .box.t { top: -1px; border-top: 0; }
+
+  /* one row per line of the formation, keeper at the bottom */
+  .rows { position: absolute; inset: 0; display: flex; flex-direction: column-reverse; }
+  .row { flex: 1; display: flex; align-items: center; justify-content: space-evenly; gap: 1%; }
+
+  .plr { display: flex; flex-direction: column; align-items: center; gap: .12em; min-width: 0; max-width: 24%; }
+  .shirt {
+    width: 2.05em; height: 2.05em; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; color: #10240f;
+    background: linear-gradient(180deg, #fff, #d8d8d8);
+    box-shadow: 0 2px 6px rgba(0,0,0,.55);
+    border: 2px solid rgba(255,255,255,.5);
+  }
+  .plr .nm {
+    color: #fff; font-weight: 800; letter-spacing: .01em; white-space: nowrap;
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+    text-shadow: 0 1px 3px rgba(0,0,0,.9);
+  }
+  /* off the pitch */
+  .plr.out .shirt { background: linear-gradient(180deg, #6d6d6d, #4a4a4a); color: #ddd; opacity: .55; }
+  .plr.out .nm { color: #9c8a95; text-decoration: line-through; }
+  /* came on */
+  .plr.in .shirt { background: linear-gradient(180deg, #8ef2a5, #43c46a); }
+
+  .subs {
+    flex: 0 0 auto; padding: 0 4% 2.6%; color: #9c8a95;
+    font-weight: 700; line-height: 1.35;
+  }
+  .subs b { color: #ffd75e; font-weight: 900; letter-spacing: .1em; }
+
+  .msg { flex: 1; display: flex; align-items: center; justify-content: center;
+         color: #9c8a95; font-weight: 700; text-align: center; padding: 6%; }
+</style>
+</head>
+<body>
+  <div class="panel" id="panel">
+    <div class="head">
+      <img id="crest" alt=""><span class="t" id="title">Lineup</span><span class="f" id="form"></span>
+    </div>
+    <div class="pitch" id="pitch">
+      <div class="circle"></div><div class="box b"></div><div class="box t"></div>
+      <div class="rows" id="rows"></div>
+    </div>
+    <div class="subs" id="subs"></div>
+  </div>
+
+<script>
+/* Starting XI laid out on a pitch, from ESPN's rosters feed.
+
+   ESPN gives a formation string ("4-2-3-1") and a formationPlace per player,
+   but those places are traditional shirt numbering (2 = right back, 3 = left
+   back, 5/6 = centre backs) rather than a left-to-right index, so using them
+   directly puts players in the wrong order. We group by POSITION instead and
+   work the left-right order out from the position code. */
+
+const Q = new URLSearchParams(location.search);
+const TEAM = Q.get("team") || "359";                  // 359 = Arsenal
+const RIVAL_MODE = Q.has("rival");
+const SIDE = Q.get("side");                           // "home" | "away" - overrides team
+const FORCE_ID = Q.get("id");
+const RIVALS = ["360", "364", "363", "382", "367"];
+const LEAGUES = ["eng.1", "uefa.champions", "uefa.europa", "eng.fa", "eng.league_cup"];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+function autoSize() {
+  const h = window.innerHeight, w = window.innerWidth;
+  const base = Math.max(9, Math.min(h * 0.026, w * 0.038));
+  $("panel").style.fontSize = base + "px";
+  $("subs").style.fontSize = (base * 0.78) + "px";
+  document.querySelectorAll(".plr .nm").forEach(e => e.style.fontSize = (base * 0.72) + "px");
+  document.querySelectorAll(".shirt").forEach(e => e.style.fontSize = (base * 0.8) + "px");
+}
+
+function pickMatch(found) {
+  if (!found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state, t = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && now - t(m) < FRESH).sort((a, b) => t(b) - t(a));
+  for (const g of [live, pre, post]) if (g.length) return g[0];
+  return null;
+}
+
+async function findMatch() {
+  const found = [];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      for (const ev of j.events ?? []) {
+        const ids = (ev.competitions?.[0]?.competitors ?? []).map(c => String(c.team?.id));
+        const hit = FORCE_ID ? ev.id === FORCE_ID
+                  : SIDE ? true
+                  : RIVAL_MODE ? ids.some(i => RIVALS.includes(i))
+                  : ids.includes(TEAM);
+        if (hit) found.push({ lg, ev });
+      }
+    } catch (e) {}
+  }
+  return pickMatch(found);
+}
+
+/* How deep a player sits. Used to sort the ten outfielders from defence to
+   attack, which we then slice into the rows the formation actually calls for -
+   grouping loosely by "defender / midfielder / forward" merged the 2 and the 3
+   of a 4-2-3-1 into one row of five, which contradicted the formation printed
+   in the header. */
+function depth(pos) {
+  const p = (pos || "").toUpperCase();
+  if (p.startsWith("G")) return 0;
+  if (/^(CD|CB|SW)/.test(p)) return 10;
+  if (/^(LB|RB|WB|LWB|RWB)/.test(p)) return 12;
+  if (/^(DM|CDM)/.test(p)) return 20;
+  if (/^(CM|M)/.test(p)) return 30;
+  if (/^(AM|CAM)/.test(p)) return 40;
+  if (/W/.test(p)) return 45;
+  if (/^(F|ST|CF|S)/.test(p)) return 50;
+  return 30;
+}
+
+// left-to-right ordering within a line, from the position code
+function lateral(pos) {
+  const p = (pos || "").toUpperCase();
+  if (/(^|-)L/.test(p)) return -1;
+  if (/(^|-)R/.test(p)) return 1;
+  return 0;
+}
+
+function renderTeam(entry) {
+  const roster = entry.roster ?? [];
+  const starters = roster.filter(p => p.starter);
+  const bench = roster.filter(p => !p.starter);
+
+  $("crest").src = entry.team?.logos?.[0]?.href || entry.team?.logo || "";
+  $("title").textContent = entry.team?.shortDisplayName || entry.team?.displayName || "Lineup";
+  $("form").textContent = entry.formation || "";
+
+  if (!starters.length) {
+    $("rows").innerHTML = "";
+    $("subs").innerHTML = '<span style="color:#9c8a95">Line-up not published yet.</span>';
+    return;
+  }
+
+  // Build the rows the formation asks for: keeper, then each number in turn.
+  const shape = (entry.formation || "").split("-").map(n => parseInt(n, 10)).filter(n => n > 0);
+  const keeper = starters.filter(p => depth(p.position?.abbreviation) === 0);
+  const outfield = starters.filter(p => depth(p.position?.abbreviation) > 0)
+                           .sort((a, b) => depth(a.position?.abbreviation) - depth(b.position?.abbreviation));
+
+  const lines = [keeper];
+  if (shape.length && shape.reduce((a, b) => a + b, 0) === outfield.length) {
+    let i = 0;
+    for (const n of shape) { lines.push(outfield.slice(i, i + n)); i += n; }
+  } else {
+    // formation missing or does not add up - fall back to three broad bands
+    const band = p => { const d = depth(p.position?.abbreviation); return d <= 12 ? 0 : d <= 40 ? 1 : 2; };
+    const b = [[], [], []];
+    for (const p of outfield) b[band(p)].push(p);
+    lines.push(...b.filter(x => x.length));
+  }
+
+  $("rows").innerHTML = lines.map(line => {
+    line.sort((a, b) => {
+      const la = lateral(a.position?.abbreviation), lb = lateral(b.position?.abbreviation);
+      if (la !== lb) return la - lb;
+      // inside the right-hand pair the higher shirt place sits further inside
+      const pa = parseInt(a.formationPlace || "0", 10), pb = parseInt(b.formationPlace || "0", 10);
+      return la > 0 ? pb - pa : pa - pb;
+    });
+    return `<div class="row">` + line.map(p => {
+      const out = p.subbedOut ? "out" : (p.subbedIn ? "in" : "");
+      const nm = p.athlete?.shortName || p.athlete?.displayName || "";
+      return `<div class="plr ${out}">
+        <span class="shirt">${esc(p.jersey || "")}</span>
+        <span class="nm">${esc(nm)}</span>
+      </div>`;
+    }).join("") + `</div>`;
+  }).join("");
+
+  const on = bench.filter(p => p.subbedIn).map(p => p.athlete?.shortName || "").filter(Boolean);
+  $("subs").innerHTML = on.length
+    ? `<b>ON:</b> ${esc(on.join(",  "))}`
+    : `<b>BENCH:</b> ${esc(bench.slice(0, 7).map(p => p.athlete?.shortName || "").filter(Boolean).join(",  "))}`;
+}
+
+async function tick() {
+  let m = null;
+  try { m = await findMatch(); } catch (e) {}
+  if (!m) {
+    $("rows").innerHTML = "";
+    $("subs").innerHTML = "";
+    $("title").textContent = "No match on";
+    $("panel").classList.add("show");
+    autoSize();
+    return setTimeout(tick, 60000);
+  }
+  try {
+    const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.lg}/summary?event=${m.ev.id}`);
+    const rosters = j.rosters ?? [];
+    let entry = null;
+    if (SIDE) entry = rosters.find(r => r.homeAway === SIDE);
+    else if (RIVAL_MODE) entry = rosters.find(r => RIVALS.includes(String(r.team?.id)));
+    else entry = rosters.find(r => String(r.team?.id) === TEAM);
+    entry = entry || rosters[0];
+    if (entry) renderTeam(entry);
+    else $("subs").innerHTML = '<span style="color:#9c8a95">Line-up not published yet.</span>';
+  } catch (e) {
+    $("subs").innerHTML = '<span style="color:#9c8a95">Line-up unavailable.</span>';
+  }
+  autoSize();
+  $("panel").classList.add("show");
+  const live = m.ev.status?.type?.state === "in";
+  setTimeout(tick, live ? 30000 : 120000);
+}
+
+addEventListener("resize", autoSize);
+tick();
+</script>
+</body>
+</html>
