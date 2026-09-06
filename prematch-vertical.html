@@ -16,27 +16,27 @@
     position: absolute; inset: 0; z-index: 0;
     background:
       radial-gradient(800px 600px at 50% -5%, rgba(239,1,7,.22), transparent 60%),
-      radial-gradient(700px 600px at 50% 105%, rgba(212,175,55,.10), transparent 60%),
-      #120508;
+      radial-gradient(700px 600px at 50% 105%, rgba(93, 160, 255,.10), transparent 60%),
+      #0c172c;
   }
   .texture { position: absolute; inset: 0; z-index: 1; background: repeating-linear-gradient(45deg, rgba(255,255,255,.013) 0 2px, transparent 2px 14px); }
 
   .top { position: absolute; top: 150px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 3; }
-  .logo { width: 150px; height: 150px; object-fit: contain; filter: drop-shadow(0 0 18px rgba(255,215,94,.35)); animation: breathe 4s ease-in-out infinite; }
+  .logo { width: 150px; height: 150px; object-fit: contain; filter: drop-shadow(0 0 18px rgba(93, 160, 255,.35)); animation: breathe 4s ease-in-out infinite; }
   @keyframes breathe { 50% { transform: scale(1.05); } }
-  .title { color: #ffd75e; font-size: 36px; font-weight: 900; letter-spacing: 8px; }
+  .title { color: #8fc4ff; font-size: 36px; font-weight: 900; letter-spacing: 8px; }
   .fixture { display: flex; align-items: center; gap: 14px; margin-top: 6px; }
   .fixture img { width: 48px; height: 48px; object-fit: contain; }
   .fixture .tm { color: #fff; font-size: 32px; font-weight: 800; }
-  .fixture .vs { color: #d4af37; font-size: 24px; font-weight: 800; }
-  .meta { color: #9c8a95; font-size: 18px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; text-align: center; padding: 0 40px; }
-  .meta b { color: #e8dfd4; }
+  .fixture .vs { color: #5da0ff; font-size: 24px; font-weight: 800; }
+  .meta { color: #8fa3c4; font-size: 18px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; text-align: center; padding: 0 40px; }
+  .meta b { color: #dce6f5; }
 
   .pitchwrap { position: absolute; left: 50%; top: 520px; width: 640px; height: 850px; margin-left: -320px; z-index: 2; }
   .pitch {
     position: absolute; inset: 0; border-radius: 14px;
     background: linear-gradient(180deg, #0c2818, #0a2214 49.8%, #0c2818 50.2%, #092012);
-    border: 2px solid rgba(212,175,55,.45);
+    border: 2px solid rgba(93, 160, 255,.45);
     box-shadow: 0 0 40px rgba(0,0,0,.6), inset 0 0 60px rgba(0,0,0,.45);
   }
   .line { position: absolute; border: 1.5px solid rgba(255,255,255,.28); }
@@ -51,7 +51,7 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 21px; font-weight: 900; color: #fff; transform: scale(0);
   }
-  .player.ars .dot { background: radial-gradient(circle at 35% 30%, #ff5158, #c00006); border: 2px solid #ffd75e; }
+  .player.ars .dot { background: radial-gradient(circle at 35% 30%, #ff5158, #c00006); border: 2px solid #8fc4ff; }
   .player.opp .dot { background: radial-gradient(circle at 35% 30%, #6c8fb8, #33506f); border: 2px solid #cfd8e6; }
   .player .nm {
     position: absolute; top: 28px; left: -85px; width: 170px; text-align: center;
@@ -66,17 +66,17 @@
   .pitch-msg.on { display: block; }
   .pitch-msg .big { color: #fff; font-size: 34px; font-weight: 900; letter-spacing: 4px; animation: pulse 2s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .5; } }
-  .pitch-msg .cd { color: #ffd75e; font-size: 52px; font-weight: 900; margin-top: 10px; }
+  .pitch-msg .cd { color: #8fc4ff; font-size: 52px; font-weight: 900; margin-top: 10px; }
 
   .subs { position: absolute; left: 40px; right: 40px; top: 1400px; z-index: 2; display: flex; gap: 20px; }
   .subcol {
-    flex: 1; background: linear-gradient(180deg, rgba(20,6,10,.86), rgba(10,4,6,.86));
-    border: 1px solid rgba(212,175,55,.4); border-radius: 16px; padding: 14px 18px;
+    flex: 1; background: linear-gradient(180deg, rgba(15, 27, 52,.86), rgba(9, 18, 36,.86));
+    border: 1px solid rgba(93, 160, 255,.4); border-radius: 16px; padding: 14px 18px;
   }
-  .subcol h4 { color: #ffd75e; font-size: 15px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
-  .subcol .p { color: #cfc6ce; font-size: 15.5px; font-weight: 600; line-height: 1.55; opacity: 0; }
+  .subcol h4 { color: #8fc4ff; font-size: 15px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .subcol .p { color: #b9c6dc; font-size: 15.5px; font-weight: 600; line-height: 1.55; opacity: 0; }
   .subcol .p.in { animation: nmfade .4s ease forwards; animation-delay: inherit; }
-  .subcol .p b { color: #d4af37; }
+  .subcol .p b { color: #5da0ff; }
 </style>
 </head>
 <body>

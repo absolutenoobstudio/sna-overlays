@@ -12,23 +12,23 @@
     position: absolute; inset: 0; z-index: 0;
     background:
       radial-gradient(1100px 750px at 50% -8%, rgba(239,1,7,.20), transparent 60%),
-      radial-gradient(900px 700px at 10% 105%, rgba(212,175,55,.10), transparent 60%),
-      radial-gradient(900px 700px at 90% 105%, rgba(212,175,55,.10), transparent 60%),
-      #120508;
+      radial-gradient(900px 700px at 10% 105%, rgba(93, 160, 255,.10), transparent 60%),
+      radial-gradient(900px 700px at 90% 105%, rgba(93, 160, 255,.10), transparent 60%),
+      #0c172c;
   }
   .texture { position: absolute; inset: 0; z-index: 1; background: repeating-linear-gradient(45deg, rgba(255,255,255,.013) 0 2px, transparent 2px 14px); }
 
   .top { position: absolute; top: 26px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; z-index: 3; }
-  .logo { width: 110px; height: 110px; object-fit: contain; filter: drop-shadow(0 0 16px rgba(255,215,94,.35)); animation: breathe 4s ease-in-out infinite; }
-  @keyframes breathe { 50% { transform: scale(1.05); filter: drop-shadow(0 0 24px rgba(255,215,94,.55)); } }
-  .ft { color: #ffd75e; font-size: 34px; font-weight: 900; letter-spacing: 10px; margin-top: 2px; }
-  .comp { color: #9c8a95; font-size: 15px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
+  .logo { width: 110px; height: 110px; object-fit: contain; filter: drop-shadow(0 0 16px rgba(93, 160, 255,.35)); animation: breathe 4s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.05); filter: drop-shadow(0 0 24px rgba(93, 160, 255,.55)); } }
+  .ft { color: #8fc4ff; font-size: 34px; font-weight: 900; letter-spacing: 10px; margin-top: 2px; }
+  .comp { color: #8fa3c4; font-size: 15px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
 
   .scorecard {
     position: absolute; top: 224px; left: 50%; transform: translateX(-50%); z-index: 3;
     display: flex; align-items: center; gap: 34px;
-    background: linear-gradient(180deg, rgba(20,6,10,.85), rgba(10,4,6,.85));
-    border: 1px solid rgba(212,175,55,.5); border-radius: 20px;
+    background: linear-gradient(180deg, rgba(15, 27, 52,.85), rgba(9, 18, 36,.85));
+    border: 1px solid rgba(93, 160, 255,.5); border-radius: 20px;
     padding: 18px 46px;
     animation: rise .8s cubic-bezier(.2,.9,.3,1) both;
   }
@@ -38,50 +38,50 @@
   .side .ab { color: #fff; font-size: 40px; font-weight: 800; letter-spacing: 1px; }
   .sc { display: flex; align-items: center; gap: 14px; }
   .sc .n { color: #fff; font-size: 76px; font-weight: 900; line-height: 1; min-width: 62px; text-align: center; }
-  .sc .d { color: #d4af37; font-size: 46px; font-weight: 700; }
-  .win { color: #ffd75e !important; }
+  .sc .d { color: #5da0ff; font-size: 46px; font-weight: 700; }
+  .win { color: #8fc4ff !important; }
 
   .panels { position: absolute; top: 424px; left: 150px; right: 150px; z-index: 3; display: flex; gap: 28px; }
   .panel {
     flex: 1;
-    background: linear-gradient(180deg, rgba(20,6,10,.85), rgba(10,4,6,.85));
-    border: 1px solid rgba(212,175,55,.42); border-radius: 18px;
+    background: linear-gradient(180deg, rgba(15, 27, 52,.85), rgba(9, 18, 36,.85));
+    border: 1px solid rgba(93, 160, 255,.42); border-radius: 18px;
     padding: 20px 26px; min-height: 320px;
     animation: fadeUp .8s ease .25s both;
   }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-  .panel h3 { color: #ffd75e; font-size: 20px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 14px; }
+  .panel h3 { color: #8fc4ff; font-size: 20px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 14px; }
 
   .goal { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-top: 1px solid rgba(255,255,255,.07); }
   .goal:first-of-type { border-top: none; }
   .goal .ic { font-size: 19px; width: 26px; }
-  .goal .who { flex: 1; color: #e8dfd4; font-size: 19px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .goal .min { color: #d4af37; font-size: 17px; font-weight: 800; width: 54px; text-align: right; }
+  .goal .who { flex: 1; color: #dce6f5; font-size: 19px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .goal .min { color: #5da0ff; font-size: 17px; font-weight: 800; width: 54px; text-align: right; }
   .goal img { width: 24px; height: 24px; object-fit: contain; }
 
   .srow { display: flex; align-items: center; gap: 14px; padding: 9px 0; border-top: 1px solid rgba(255,255,255,.07); }
   .srow:first-of-type { border-top: none; }
   .srow .v { color: #fff; font-size: 22px; font-weight: 800; width: 92px; }
   .srow .v.r { text-align: right; }
-  .srow .l { flex: 1; text-align: center; color: #9c8a95; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  .srow .l { flex: 1; text-align: center; color: #8fa3c4; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
   .bar { height: 12px; border-radius: 999px; overflow: hidden; display: flex; background: rgba(255,255,255,.12); margin: 4px 0 10px; }
   .bar .h { background: linear-gradient(90deg, #ef0107, #ff4d4d); }
   .bar .a { background: linear-gradient(90deg, #4d9fff, #2d6fd6); flex: 1; }
 
   .standing {
     position: absolute; bottom: 168px; left: 0; right: 0; text-align: center; z-index: 3;
-    color: #e8dfd4; font-size: 22px; font-weight: 700; letter-spacing: 1px;
+    color: #dce6f5; font-size: 22px; font-weight: 700; letter-spacing: 1px;
     animation: fadeUp .8s ease .5s both;
   }
-  .standing b { color: #ffd75e; }
+  .standing b { color: #8fc4ff; }
 
   .footer { position: absolute; bottom: 54px; left: 0; right: 0; text-align: center; z-index: 3; animation: fadeUp .8s ease .7s both; }
   .footer .th { color: #fff; font-size: 40px; font-weight: 900; letter-spacing: 6px; }
-  .footer .sub { color: #9c8a95; font-size: 19px; font-weight: 700; letter-spacing: 2px; margin-top: 8px; }
-  .footer .sub b { color: #ffd75e; }
-  .rule { width: 420px; height: 3px; background: #d4af37; margin: 12px auto 0; opacity: .85; }
+  .footer .sub { color: #8fa3c4; font-size: 19px; font-weight: 700; letter-spacing: 2px; margin-top: 8px; }
+  .footer .sub b { color: #8fc4ff; }
+  .rule { width: 420px; height: 3px; background: #5da0ff; margin: 12px auto 0; opacity: .85; }
 
-  .empty { color: #9c8a95; font-size: 18px; font-weight: 600; text-align: center; padding: 28px 10px; line-height: 1.6; }
+  .empty { color: #8fa3c4; font-size: 18px; font-weight: 600; text-align: center; padding: 28px 10px; line-height: 1.6; }
 </style>
 </head>
 <body>

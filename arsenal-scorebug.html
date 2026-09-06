@@ -10,8 +10,8 @@
   .bug {
     margin-top: 6px;
     display: flex; align-items: stretch;
-    background: linear-gradient(180deg, rgba(20,6,10,.92), rgba(10,4,6,.92));
-    border: 1px solid rgba(212,175,55,.55);
+    background: linear-gradient(180deg, rgba(15, 27, 52,.92), rgba(9, 18, 36,.92));
+    border: 1px solid rgba(93, 160, 255,.55);
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 6px 24px rgba(0,0,0,.55);
@@ -27,33 +27,33 @@
   .score {
     display: flex; align-items: center; gap: 10px; padding: 0 18px;
     background: rgba(239,1,7,.18);
-    border-left: 1px solid rgba(212,175,55,.35);
-    border-right: 1px solid rgba(212,175,55,.35);
+    border-left: 1px solid rgba(93, 160, 255,.35);
+    border-right: 1px solid rgba(93, 160, 255,.35);
   }
   .score .num {
     color: #fff; font-size: 40px; font-weight: 800; min-width: 34px; text-align: center;
     transition: transform .3s;
   }
   .score .num.bump { animation: bump .8s; }
-  @keyframes bump { 30% { transform: scale(1.6); color: #ffd75e; } }
-  .score .sep { color: #d4af37; font-size: 30px; font-weight: 700; }
-  .score .vs { color: #d4af37; font-size: 26px; font-weight: 800; letter-spacing: 2px; padding: 0 4px; }
+  @keyframes bump { 30% { transform: scale(1.6); color: #8fc4ff; } }
+  .score .sep { color: #5da0ff; font-size: 30px; font-weight: 700; }
+  .score .vs { color: #5da0ff; font-size: 26px; font-weight: 800; letter-spacing: 2px; padding: 0 4px; }
 
   .meta { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 18px 8px 14px; min-width: 110px; }
-  .clock { color: #ffd75e; font-size: 22px; font-weight: 800; }
+  .clock { color: #8fc4ff; font-size: 22px; font-weight: 800; }
   .clock.live::before {
     content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%;
     background: #ff3b5c; margin-right: 7px; animation: blink 1.4s infinite;
   }
   @keyframes blink { 50% { opacity: .2; } }
-  .comp { color: #9c8a95; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .comp { color: #8fa3c4; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 
   .eventline {
     margin-top: 6px; max-width: 92vw;
-    background: rgba(10,4,6,.85);
-    border: 1px solid rgba(212,175,55,.3);
+    background: rgba(9, 18, 36,.85);
+    border: 1px solid rgba(93, 160, 255,.3);
     border-radius: 999px; padding: 5px 20px;
-    color: #e8dfd4; font-size: 16px; font-weight: 600;
+    color: #dce6f5; font-size: 16px; font-weight: 600;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     opacity: 0; transform: translateY(-8px);
     transition: opacity .5s, transform .5s;

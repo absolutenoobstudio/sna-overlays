@@ -13,36 +13,36 @@
     position: absolute; inset: 0; z-index: 0;
     background:
       radial-gradient(1000px 700px at 12% 8%, rgba(239,1,7,.16), transparent 60%),
-      radial-gradient(900px 700px at 90% 92%, rgba(212,175,55,.10), transparent 60%),
-      #120508;
+      radial-gradient(900px 700px at 90% 92%, rgba(93, 160, 255,.10), transparent 60%),
+      #0c172c;
   }
   .texture { position: absolute; inset: 0; z-index: 1;
     background: repeating-linear-gradient(45deg, rgba(255,255,255,.014) 0 2px, transparent 2px 14px); }
 
   .title { position: absolute; top: 66px; left: 60px; z-index: 3;
-    color: #ffd75e; font-size: 42px; font-weight: 900; letter-spacing: 8px; }
+    color: #8fc4ff; font-size: 42px; font-weight: 900; letter-spacing: 8px; }
   .sub { position: absolute; top: 122px; left: 62px; z-index: 3;
-    color: #9c8a95; font-size: 15px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; }
+    color: #8fa3c4; font-size: 15px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; }
 
   /* score strip, top right */
   .score { position: absolute; top: 60px; right: 60px; z-index: 3;
     display: flex; align-items: center; gap: 18px;
-    background: linear-gradient(180deg, rgba(20,6,10,.9), rgba(10,4,6,.9));
-    border: 1px solid rgba(212,175,55,.45); border-radius: 14px; padding: 12px 22px; }
+    background: linear-gradient(180deg, rgba(15, 27, 52,.9), rgba(9, 18, 36,.9));
+    border: 1px solid rgba(93, 160, 255,.45); border-radius: 14px; padding: 12px 22px; }
   .score img { width: 44px; height: 44px; object-fit: contain; }
   .score .ab { color: #fff; font-size: 26px; font-weight: 800; letter-spacing: 1px; }
-  .score .sc { color: #ffd75e; font-size: 34px; font-weight: 900; }
-  .score .st { color: #9c8a95; font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-left: 8px; }
+  .score .sc { color: #8fc4ff; font-size: 34px; font-weight: 900; }
+  .score .st { color: #8fa3c4; font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-left: 8px; }
 
   /* the stat area - left column is left clear for cameras */
   .zone { position: absolute; left: 620px; top: 210px; width: 1250px; bottom: 120px; z-index: 3; }
 
   .row { display: flex; align-items: center; gap: 22px; margin-bottom: 26px; }
-  .row .lbl { flex: 0 0 300px; text-align: center; color: #9c8a95;
+  .row .lbl { flex: 0 0 300px; text-align: center; color: #8fa3c4;
     font-size: 15px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; }
   .row .v { flex: 0 0 120px; color: #fff; font-size: 34px; font-weight: 900; }
   .row .v.r { text-align: right; }
-  .row .v.win { color: #ffd75e; }
+  .row .v.win { color: #8fc4ff; }
   .bar { flex: 1; height: 16px; border-radius: 999px; overflow: hidden; display: flex;
     background: rgba(255,255,255,.10); }
   .bar .h { background: linear-gradient(90deg, #ef0107, #ff5a60); transition: width 1s cubic-bezier(.4,0,.2,1); }
@@ -51,15 +51,15 @@
   /* timeline page */
   .tl { height: 100%; overflow: hidden; }
   .ev { display: flex; align-items: center; gap: 18px; padding: 11px 0;
-    border-bottom: 1px solid rgba(212,175,55,.14); }
-  .ev .clk { flex: 0 0 92px; color: #ffd75e; font-size: 22px; font-weight: 900; }
+    border-bottom: 1px solid rgba(93, 160, 255,.14); }
+  .ev .clk { flex: 0 0 92px; color: #8fc4ff; font-size: 22px; font-weight: 900; }
   .ev .ico { flex: 0 0 34px; font-size: 22px; text-align: center; }
   .ev .who { flex: 1; color: #fff; font-size: 23px; font-weight: 700; }
-  .ev .tm { color: #9c8a95; font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+  .ev .tm { color: #8fa3c4; font-size: 17px; font-weight: 700; letter-spacing: 1px; }
 
   .foot { position: absolute; left: 620px; bottom: 60px; z-index: 3;
-    color: #9c8a95; font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
-  .none { color: #9c8a95; font-size: 22px; font-weight: 700; padding-top: 40px; }
+    color: #8fa3c4; font-size: 14px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  .none { color: #8fa3c4; font-size: 22px; font-weight: 700; padding-top: 40px; }
 </style>
 </head>
 <body>

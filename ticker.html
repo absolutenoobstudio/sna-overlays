@@ -12,8 +12,8 @@
   .bgfill {
     position: absolute; inset: 0;
     display: flex; align-items: stretch;
-    background: linear-gradient(180deg, rgba(20,6,10,.94), rgba(8,3,5,.96));
-    border-top: 1px solid rgba(212,175,55,.55);
+    background: linear-gradient(180deg, rgba(15, 27, 52,.94), rgba(7, 15, 31,.96));
+    border-top: 1px solid rgba(93, 160, 255,.55);
     box-shadow: 0 -6px 22px rgba(0,0,0,.5);
     opacity: 0; transition: opacity .8s ease;
   }
@@ -24,7 +24,7 @@
     flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
     padding: 0 26px 0 22px;
     background: linear-gradient(180deg, #b8000a, #7c0007);
-    border-right: 2px solid rgba(212,175,55,.85);
+    border-right: 2px solid rgba(93, 160, 255,.85);
     z-index: 2;
   }
   .badge .crest { height: 60%; max-height: 40px; }
@@ -38,7 +38,7 @@
   .window { position: relative; flex: 1; overflow: hidden; }
   .window::after {           /* soft fade so items do not pop at the right edge */
     content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 90px;
-    background: linear-gradient(90deg, rgba(10,4,6,0), rgba(10,4,6,.95));
+    background: linear-gradient(90deg, rgba(9, 18, 36,0), rgba(9, 18, 36,.95));
     pointer-events: none; z-index: 2;
   }
   .track { position: absolute; top: 0; left: 0; height: 100%; display: flex; align-items: center; white-space: nowrap; }
@@ -48,13 +48,13 @@
   .run-half { display: flex; align-items: center; }
 
   .item { display: inline-flex; align-items: baseline; gap: 9px; padding: 0 30px; }
-  .item .k { color: #9c8a95; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  .item .k { color: #8fa3c4; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
   .item .v { color: #fff; font-size: 21px; font-weight: 800; letter-spacing: .5px; }
   .item .v.red { color: #ff5a60; }
-  .item .v.gold { color: #ffd75e; }
-  .item .v.dim { color: #cfc6ce; font-weight: 700; font-size: 19px; }
+  .item .v.gold { color: #8fc4ff; }
+  .item .v.dim { color: #b9c6dc; font-weight: 700; font-size: 19px; }
 
-  .sep { color: rgba(212,175,55,.75); font-size: 13px; transform: translateY(-2px); }
+  .sep { color: rgba(93, 160, 255,.75); font-size: 13px; transform: translateY(-2px); }
 
   .live {
     display: inline-flex; align-items: center; gap: 7px;

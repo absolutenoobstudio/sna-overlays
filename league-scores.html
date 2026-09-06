@@ -9,8 +9,8 @@
 
   .panel {
     width: 100%;
-    background: linear-gradient(180deg, rgba(20,6,10,.94), rgba(10,4,6,.94));
-    border: 1px solid rgba(212,175,55,.5);
+    background: linear-gradient(180deg, rgba(15, 27, 52,.94), rgba(9, 18, 36,.94));
+    border: 1px solid rgba(93, 160, 255,.5);
     border-radius: 18px;
     display: flex; flex-direction: column;
     overflow: hidden;
@@ -22,11 +22,11 @@
 
   .head {
     padding: 14px 22px 12px;
-    border-bottom: 1px solid rgba(212,175,55,.35);
+    border-bottom: 1px solid rgba(93, 160, 255,.35);
     display: flex; align-items: baseline; justify-content: space-between;
   }
-  .head .t1 { color: #ffd75e; font-size: 22px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
-  .head .t2 { color: #9c8a95; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  .head .t1 { color: #8fc4ff; font-size: 22px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
+  .head .t2 { color: #8fa3c4; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
 
   .rows { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; padding: 8px 0; overflow: hidden; }
   .row {
@@ -35,7 +35,7 @@
   }
   .row:nth-child(even) { background: rgba(255,255,255,.04); }
   .row img { width: 28px; height: 28px; object-fit: contain; flex: none; }
-  .row .name { color: #e8dfd4; font-size: 18px; font-weight: 700; width: 56px; }
+  .row .name { color: #dce6f5; font-size: 18px; font-weight: 700; width: 56px; }
   .row .name.away { text-align: right; }
   .row .mid {
     flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -43,15 +43,15 @@
   .row .sc {
     color: #fff; font-size: 22px; font-weight: 800; min-width: 24px; text-align: center;
   }
-  .row .dash { color: #d4af37; font-weight: 700; }
-  .row .st { width: 62px; text-align: right; color: #9c8a95; font-size: 13px; font-weight: 700; flex: none; }
+  .row .dash { color: #5da0ff; font-weight: 700; }
+  .row .st { width: 62px; text-align: right; color: #8fa3c4; font-size: 13px; font-weight: 700; flex: none; }
   .row .st.live { color: #ff5e75; }
   .row .st.live::before {
     content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
     background: #ff3b5c; margin-right: 5px; animation: blink 1.4s infinite; vertical-align: middle;
   }
   @keyframes blink { 50% { opacity: .2; } }
-  .empty { color: #9c8a95; font-size: 17px; font-weight: 600; text-align: center; padding: 30px 20px; }
+  .empty { color: #8fa3c4; font-size: 17px; font-weight: 600; text-align: center; padding: 30px 20px; }
 </style>
 </head>
 <body>

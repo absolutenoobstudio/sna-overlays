@@ -10,22 +10,22 @@
     position: absolute; inset: 0; z-index: 0;
     background:
       radial-gradient(800px 600px at 50% -4%, rgba(239,1,7,.20), transparent 60%),
-      radial-gradient(700px 600px at 50% 104%, rgba(212,175,55,.10), transparent 60%),
-      #120508;
+      radial-gradient(700px 600px at 50% 104%, rgba(93, 160, 255,.10), transparent 60%),
+      #0c172c;
   }
   .texture { position: absolute; inset: 0; z-index: 1; background: repeating-linear-gradient(45deg, rgba(255,255,255,.013) 0 2px, transparent 2px 14px); }
 
   .top { position: absolute; top: 170px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; z-index: 3; }
-  .logo { width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 0 16px rgba(255,215,94,.35)); animation: breathe 4s ease-in-out infinite; }
+  .logo { width: 140px; height: 140px; object-fit: contain; filter: drop-shadow(0 0 16px rgba(93, 160, 255,.35)); animation: breathe 4s ease-in-out infinite; }
   @keyframes breathe { 50% { transform: scale(1.05); } }
-  .ft { color: #ffd75e; font-size: 40px; font-weight: 900; letter-spacing: 10px; }
-  .comp { color: #9c8a95; font-size: 17px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; text-align: center; padding: 0 40px; }
+  .ft { color: #8fc4ff; font-size: 40px; font-weight: 900; letter-spacing: 10px; }
+  .comp { color: #8fa3c4; font-size: 17px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; text-align: center; padding: 0 40px; }
 
   .scorecard {
     position: absolute; top: 520px; left: 40px; right: 40px; z-index: 3;
     display: flex; align-items: center; justify-content: center; gap: 22px;
-    background: linear-gradient(180deg, rgba(20,6,10,.85), rgba(10,4,6,.85));
-    border: 1px solid rgba(212,175,55,.5); border-radius: 20px; padding: 20px 24px;
+    background: linear-gradient(180deg, rgba(15, 27, 52,.85), rgba(9, 18, 36,.85));
+    border: 1px solid rgba(93, 160, 255,.5); border-radius: 20px; padding: 20px 24px;
     animation: rise .8s cubic-bezier(.2,.9,.3,1) both;
   }
   @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
@@ -34,44 +34,44 @@
   .side .ab { color: #fff; font-size: 30px; font-weight: 800; }
   .sc { display: flex; align-items: center; gap: 12px; }
   .sc .n { color: #fff; font-size: 78px; font-weight: 900; line-height: 1; min-width: 60px; text-align: center; }
-  .sc .d { color: #d4af37; font-size: 40px; font-weight: 700; }
-  .win { color: #ffd75e !important; }
+  .sc .d { color: #5da0ff; font-size: 40px; font-weight: 700; }
+  .win { color: #8fc4ff !important; }
 
   .panel {
     position: absolute; left: 40px; right: 40px; z-index: 3;
-    background: linear-gradient(180deg, rgba(20,6,10,.85), rgba(10,4,6,.85));
-    border: 1px solid rgba(212,175,55,.42); border-radius: 18px; padding: 18px 24px;
+    background: linear-gradient(180deg, rgba(15, 27, 52,.85), rgba(9, 18, 36,.85));
+    border: 1px solid rgba(93, 160, 255,.42); border-radius: 18px; padding: 18px 24px;
     animation: rise .8s ease .25s both;
   }
   #goalsPanel { top: 760px; min-height: 300px; }
   #statsPanel { top: 1090px; min-height: 300px; }
-  .panel h3 { color: #ffd75e; font-size: 20px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; }
+  .panel h3 { color: #8fc4ff; font-size: 20px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; }
 
   .goal { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,.07); }
   .goal:first-of-type { border-top: none; }
   .goal .ic { font-size: 20px; width: 30px; }
   .goal img { width: 26px; height: 26px; object-fit: contain; }
-  .goal .who { flex: 1; color: #e8dfd4; font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .goal .min { color: #d4af37; font-size: 18px; font-weight: 800; width: 56px; text-align: right; }
+  .goal .who { flex: 1; color: #dce6f5; font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .goal .min { color: #5da0ff; font-size: 18px; font-weight: 800; width: 56px; text-align: right; }
 
   .srow { display: flex; align-items: center; gap: 14px; padding: 9px 0; border-top: 1px solid rgba(255,255,255,.07); }
   .srow:first-of-type { border-top: none; }
   .srow .v { color: #fff; font-size: 23px; font-weight: 800; width: 96px; }
   .srow .v.r { text-align: right; }
-  .srow .l { flex: 1; text-align: center; color: #9c8a95; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  .srow .l { flex: 1; text-align: center; color: #8fa3c4; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
   .bar { height: 12px; border-radius: 999px; overflow: hidden; display: flex; background: rgba(255,255,255,.12); margin: 4px 0 10px; }
   .bar .h { background: linear-gradient(90deg, #ef0107, #ff4d4d); }
   .bar .a { background: linear-gradient(90deg, #4d9fff, #2d6fd6); flex: 1; }
 
-  .standing { position: absolute; top: 1430px; left: 0; right: 0; text-align: center; z-index: 3; color: #e8dfd4; font-size: 21px; font-weight: 700; animation: rise .8s ease .5s both; }
-  .standing b { color: #ffd75e; }
+  .standing { position: absolute; top: 1430px; left: 0; right: 0; text-align: center; z-index: 3; color: #dce6f5; font-size: 21px; font-weight: 700; animation: rise .8s ease .5s both; }
+  .standing b { color: #8fc4ff; }
 
   .footer { position: absolute; bottom: 300px; left: 0; right: 0; text-align: center; z-index: 3; animation: rise .8s ease .7s both; }
   .footer .th { color: #fff; font-size: 44px; font-weight: 900; letter-spacing: 5px; }
-  .rule { width: 380px; height: 3px; background: #d4af37; margin: 12px auto; opacity: .85; }
-  .footer .sub { color: #9c8a95; font-size: 19px; font-weight: 700; letter-spacing: 1px; line-height: 1.5; padding: 0 50px; }
-  .footer .sub b { color: #ffd75e; }
-  .empty { color: #9c8a95; font-size: 18px; font-weight: 600; text-align: center; padding: 26px 8px; line-height: 1.6; }
+  .rule { width: 380px; height: 3px; background: #5da0ff; margin: 12px auto; opacity: .85; }
+  .footer .sub { color: #8fa3c4; font-size: 19px; font-weight: 700; letter-spacing: 1px; line-height: 1.5; padding: 0 50px; }
+  .footer .sub b { color: #8fc4ff; }
+  .empty { color: #8fa3c4; font-size: 18px; font-weight: 600; text-align: center; padding: 26px 8px; line-height: 1.6; }
 </style>
 </head>
 <body>

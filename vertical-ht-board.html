@@ -11,27 +11,27 @@
     position: absolute; inset: 0;
     background:
       radial-gradient(700px 500px at 15% 8%, rgba(239,1,7,.18), transparent 60%),
-      radial-gradient(650px 500px at 88% 94%, rgba(212,175,55,.12), transparent 60%),
-      #120508;
+      radial-gradient(650px 500px at 88% 94%, rgba(93, 160, 255,.12), transparent 60%),
+      #0c172c;
     opacity: 1; transition: opacity 1s ease;
   }
   .board.adphase { opacity: 0; }
   .texture { position: absolute; inset: 0; background: repeating-linear-gradient(45deg, rgba(255,255,255,.014) 0 2px, transparent 2px 14px); }
 
-  .ht-title { position: absolute; top: 270px; left: 0; right: 0; text-align: center; color: #ffd75e; font-size: 46px; font-weight: 900; letter-spacing: 10px; }
+  .ht-title { position: absolute; top: 270px; left: 0; right: 0; text-align: center; color: #8fc4ff; font-size: 46px; font-weight: 900; letter-spacing: 10px; }
   .zone { position: absolute; left: 40px; right: 40px; top: 360px; bottom: 400px; }
   .page {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(20,6,10,.85), rgba(10,4,6,.85));
-    border: 1px solid rgba(212,175,55,.45); border-radius: 22px;
+    background: linear-gradient(180deg, rgba(15, 27, 52,.85), rgba(9, 18, 36,.85));
+    border: 1px solid rgba(93, 160, 255,.45); border-radius: 22px;
     padding: 28px 30px;
     opacity: 0; transform: translateX(36px);
     transition: opacity .6s, transform .6s;
     display: flex; flex-direction: column;
   }
   .page.on { opacity: 1; transform: translateX(0); }
-  .ptitle { color: #ffd75e; font-size: 26px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: baseline; }
-  .ptitle small { color: #9c8a95; font-size: 14px; letter-spacing: 2px; }
+  .ptitle { color: #8fc4ff; font-size: 26px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: baseline; }
+  .ptitle small { color: #8fa3c4; font-size: 14px; letter-spacing: 2px; }
 
   .h2h { flex: 1; display: flex; flex-direction: column; gap: 6px; }
   .h2h-teams { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -41,18 +41,18 @@
   .statrow { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid rgba(255,255,255,.07); }
   .statrow .v { color: #fff; font-size: 27px; font-weight: 800; width: 130px; }
   .statrow .v.right { text-align: right; }
-  .statrow .lbl { flex: 1; text-align: center; color: #9c8a95; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
-  .statrow .better { color: #ffd75e; }
+  .statrow .lbl { flex: 1; text-align: center; color: #8fa3c4; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  .statrow .better { color: #8fc4ff; }
   .formchips { display: inline-flex; gap: 4px; }
   .chip { width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 800; }
   .chip.W { background: #1f9d55; } .chip.D { background: #8a8f98; } .chip.L { background: #d64545; }
 
   .tbl { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
-  .thead { display: flex; gap: 10px; padding: 0 10px 8px; color: #6f6270; font-size: 13px; font-weight: 800; letter-spacing: 1px; }
+  .thead { display: flex; gap: 10px; padding: 0 10px 8px; color: #63758f; font-size: 13px; font-weight: 800; letter-spacing: 1px; }
   .trow { display: flex; align-items: center; gap: 10px; padding: 5.5px 10px; border-radius: 8px; }
   .trow.hl { background: rgba(239,1,7,.22); border: 1px solid rgba(239,1,7,.5); }
   .trow.hl2 { background: rgba(77,159,255,.14); border: 1px solid rgba(77,159,255,.4); }
-  .rk { width: 34px; color: #9c8a95; font-size: 18px; font-weight: 800; text-align: right; }
+  .rk { width: 34px; color: #8fa3c4; font-size: 18px; font-weight: 800; text-align: right; }
   .trow img { width: 28px; height: 28px; object-fit: contain; }
   .sp { width: 28px; }
   .mv { width: 16px; font-size: 13px; font-weight: 900; text-align: center; }
@@ -60,30 +60,30 @@
   .ldot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
           background: #ff3b3b; margin-left: 8px; animation: htblink 1.3s infinite; }
   @keyframes htblink { 50% { opacity: .25; } }
-  .tn { flex: 1; color: #e8dfd4; font-size: 19px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .num { width: 44px; text-align: right; color: #9c8a95; font-size: 17px; font-weight: 700; }
-  .pts { width: 54px; text-align: right; color: #ffd75e; font-size: 20px; font-weight: 900; }
+  .tn { flex: 1; color: #dce6f5; font-size: 19px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .num { width: 44px; text-align: right; color: #8fa3c4; font-size: 17px; font-weight: 700; }
+  .pts { width: 54px; text-align: right; color: #8fc4ff; font-size: 20px; font-weight: 900; }
 
   .srows { flex: 1; display: flex; flex-direction: column; }
   .srow { display: flex; align-items: center; gap: 12px; padding: 13px 8px; border-top: 1px solid rgba(255,255,255,.06); }
   .srow img { width: 34px; height: 34px; object-fit: contain; }
-  .srow .name { color: #e8dfd4; font-size: 21px; font-weight: 700; width: 66px; }
+  .srow .name { color: #dce6f5; font-size: 21px; font-weight: 700; width: 66px; }
   .srow .name.away { text-align: right; }
   .srow .mid { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; }
   .srow .sc { color: #fff; font-size: 25px; font-weight: 800; min-width: 28px; text-align: center; }
-  .srow .dash { color: #d4af37; font-weight: 700; }
-  .srow .st { width: 74px; text-align: right; color: #9c8a95; font-size: 15px; font-weight: 700; }
+  .srow .dash { color: #5da0ff; font-weight: 700; }
+  .srow .st { width: 74px; text-align: right; color: #8fa3c4; font-size: 15px; font-weight: 700; }
   .srow .st.live { color: #ff5e75; }
-  .srow .st.ht { color: #ffd75e; }
+  .srow .st.ht { color: #8fc4ff; }
   .srow.goal { animation: htgoal 2.6s ease-out 1; }
   @keyframes htgoal { 0% { background: rgba(120,230,140,.50); } 18% { background: rgba(120,230,140,.36); } 100% { background: transparent; } }
   .srow.goal .sc { animation: htgoalpop 2.6s ease-out 1; }
   @keyframes htgoalpop { 0%, 12% { color: #8ef2a5; transform: scale(1.25); } 100% { color: #fff; transform: scale(1); } }
-  .empty { color: #9c8a95; font-size: 19px; font-weight: 600; text-align: center; padding: 40px; }
+  .empty { color: #8fa3c4; font-size: 19px; font-weight: 600; text-align: center; padding: 40px; }
 
   .next-ad {
     position: absolute; bottom: 340px; left: 0; right: 0; text-align: center;
-    color: #9c8a95; font-size: 16px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: #8fa3c4; font-size: 16px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
   }
 </style>
 </head>
@@ -230,7 +230,7 @@ async function renderH2H() {
       ${h2hRow(`${statVal(eA, "wins")}-${statVal(eA, "ties")}-${statVal(eA, "losses")}`, "W - D - L", `${statVal(eO, "wins")}-${statVal(eO, "ties")}-${statVal(eO, "losses")}`)}
       ${h2hRow(statVal(eA, "pointsFor"), "Goals scored", statVal(eO, "pointsFor"))}
       ${h2hRow(statVal(eA, "pointsAgainst"), "Goals conceded", statVal(eO, "pointsAgainst"), false)}
-      <div class="h2h-teams" style="margin-top:14px">${chips(ctx.ars.form)}<span style="color:#9c8a95;font-size:15px;font-weight:700;letter-spacing:2px">RECENT FORM</span>${chips(ctx.opp.form)}</div>`;
+      <div class="h2h-teams" style="margin-top:14px">${chips(ctx.ars.form)}<span style="color:#8fa3c4;font-size:15px;font-weight:700;letter-spacing:2px">RECENT FORM</span>${chips(ctx.opp.form)}</div>`;
   } catch (e) {
     $("h2h").innerHTML = `<div class="empty">Season stats unavailable</div>`;
   }

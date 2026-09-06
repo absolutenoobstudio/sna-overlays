@@ -16,8 +16,8 @@
     position: absolute; inset: 0; z-index: 0;
     background:
       radial-gradient(1000px 700px at 12% 8%, rgba(239,1,7,.16), transparent 60%),
-      radial-gradient(900px 700px at 90% 92%, rgba(212,175,55,.10), transparent 60%),
-      #120508;
+      radial-gradient(900px 700px at 90% 92%, rgba(93, 160, 255,.10), transparent 60%),
+      #0c172c;
   }
   .texture {
     position: absolute; inset: 0; z-index: 1;
@@ -25,19 +25,19 @@
   }
   .ht-title {
     position: absolute; top: 78px; left: 60px;
-    color: #ffd75e; font-size: 44px; font-weight: 900; letter-spacing: 8px;
+    color: #8fc4ff; font-size: 44px; font-weight: 900; letter-spacing: 8px;
   }
-  .ht-sub { position: absolute; top: 136px; left: 62px; color: #9c8a95; font-size: 16px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; }
+  .ht-sub { position: absolute; top: 136px; left: 62px; color: #8fa3c4; font-size: 16px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; }
 
   /* left slot frame for the video ad */
   .ad-slot {
     position: absolute; left: 50px; top: 180px; width: 520px; height: 700px;
-    border: 1px solid rgba(212,175,55,.4); border-radius: 22px;
+    border: 1px solid rgba(93, 160, 255,.4); border-radius: 22px;
     background: rgba(0,0,0,.35);
   }
   .ad-cap {
     position: absolute; left: 50px; top: 892px; width: 520px; text-align: center;
-    color: #9c8a95; font-size: 15px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: #8fa3c4; font-size: 15px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
   }
 
   /* right rotating zone */
@@ -46,8 +46,8 @@
   }
   .page {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(20,6,10,.85), rgba(10,4,6,.85));
-    border: 1px solid rgba(212,175,55,.45);
+    background: linear-gradient(180deg, rgba(15, 27, 52,.85), rgba(9, 18, 36,.85));
+    border: 1px solid rgba(93, 160, 255,.45);
     border-radius: 20px;
     padding: 26px 34px;
     opacity: 0; transform: translateX(40px);
@@ -56,8 +56,8 @@
     display: flex; flex-direction: column;
   }
   .page.on { opacity: 1; transform: translateX(0); }
-  .ptitle { color: #ffd75e; font-size: 24px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: baseline; }
-  .ptitle small { color: #9c8a95; font-size: 13px; letter-spacing: 2px; }
+  .ptitle { color: #8fc4ff; font-size: 24px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: baseline; }
+  .ptitle small { color: #8fa3c4; font-size: 13px; letter-spacing: 2px; }
 
   /* h2h page */
   .h2h { flex: 1; display: flex; flex-direction: column; gap: 8px; }
@@ -68,8 +68,8 @@
   .statrow { display: flex; align-items: center; gap: 16px; padding: 7px 0; border-top: 1px solid rgba(255,255,255,.07); }
   .statrow .v { color: #fff; font-size: 24px; font-weight: 800; width: 130px; }
   .statrow .v.right { text-align: right; }
-  .statrow .lbl { flex: 1; text-align: center; color: #9c8a95; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
-  .statrow .better { color: #ffd75e; }
+  .statrow .lbl { flex: 1; text-align: center; color: #8fa3c4; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+  .statrow .better { color: #8fc4ff; }
   .formchips { display: inline-flex; gap: 4px; }
   .chip { width: 24px; height: 24px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 800; }
   .chip.W { background: #1f9d55; } .chip.D { background: #8a8f98; } .chip.L { background: #d64545; }
@@ -81,41 +81,41 @@
   }
   .trow.hl { background: rgba(239,1,7,.22); border: 1px solid rgba(239,1,7,.5); }
   .trow.hl2 { background: rgba(77,159,255,.14); border: 1px solid rgba(77,159,255,.4); }
-  .trow .rk { width: 30px; color: #9c8a95; font-size: 17px; font-weight: 800; text-align: right; }
+  .trow .rk { width: 30px; color: #8fa3c4; font-size: 17px; font-weight: 800; text-align: right; }
   .trow img { width: 26px; height: 26px; object-fit: contain; }
   .trow .mv { width: 14px; font-size: 12px; font-weight: 900; text-align: center; }
   .trow .mv.up { color: #8ef2a5; } .trow .mv.down { color: #ff7b80; }
   .trow .ldot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
                 background: #ff3b3b; margin-left: 7px; animation: htblink 1.3s infinite; }
   @keyframes htblink { 50% { opacity: .25; } }
-  .trow .tn { flex: 1; color: #e8dfd4; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .trow .num { width: 36px; text-align: right; color: #9c8a95; font-size: 16px; font-weight: 700; }
-  .trow .pts { width: 44px; text-align: right; color: #ffd75e; font-size: 18px; font-weight: 900; }
-  .thead { display: flex; gap: 10px; padding: 0 10px 6px; color: #6f6270; font-size: 12px; font-weight: 800; letter-spacing: 1px; }
+  .trow .tn { flex: 1; color: #dce6f5; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .trow .num { width: 36px; text-align: right; color: #8fa3c4; font-size: 16px; font-weight: 700; }
+  .trow .pts { width: 44px; text-align: right; color: #8fc4ff; font-size: 18px; font-weight: 900; }
+  .thead { display: flex; gap: 10px; padding: 0 10px 6px; color: #63758f; font-size: 12px; font-weight: 800; letter-spacing: 1px; }
   .thead .rk { width: 30px; text-align: right; } .thead .mv { width: 14px; } .thead .sp { width: 26px; } .thead .tn { flex: 1; } .thead .num { width: 36px; text-align: right; } .thead .pts { width: 44px; text-align: right; }
 
   /* scores page */
   .srows { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
   .srow { display: flex; align-items: center; gap: 12px; padding: 10px 8px; border-top: 1px solid rgba(255,255,255,.06); }
   .srow img { width: 32px; height: 32px; object-fit: contain; }
-  .srow .name { color: #e8dfd4; font-size: 20px; font-weight: 700; width: 64px; }
+  .srow .name { color: #dce6f5; font-size: 20px; font-weight: 700; width: 64px; }
   .srow .name.away { text-align: right; }
   .srow .mid { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; }
   .srow .sc { color: #fff; font-size: 24px; font-weight: 800; min-width: 26px; text-align: center; }
-  .srow .dash { color: #d4af37; font-weight: 700; }
-  .srow .st { width: 70px; text-align: right; color: #9c8a95; font-size: 14px; font-weight: 700; }
+  .srow .dash { color: #5da0ff; font-weight: 700; }
+  .srow .st { width: 70px; text-align: right; color: #8fa3c4; font-size: 14px; font-weight: 700; }
   .srow .st.live { color: #ff5e75; }
-  .srow .st.ht { color: #ffd75e; }
+  .srow .st.ht { color: #8fc4ff; }
   /* a goal just went in somewhere else */
   .srow.goal { animation: htgoal 2.6s ease-out 1; }
   @keyframes htgoal { 0% { background: rgba(120,230,140,.50); } 18% { background: rgba(120,230,140,.36); } 100% { background: transparent; } }
   .srow.goal .sc { animation: htgoalpop 2.6s ease-out 1; }
   @keyframes htgoalpop { 0%, 12% { color: #8ef2a5; transform: scale(1.25); } 100% { color: #fff; transform: scale(1); } }
-  .empty { color: #9c8a95; font-size: 18px; font-weight: 600; text-align: center; padding: 40px; }
+  .empty { color: #8fa3c4; font-size: 18px; font-weight: 600; text-align: center; padding: 40px; }
 
   .dots { position: absolute; bottom: -34px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; }
   .dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.25); transition: background .3s, transform .3s; }
-  .dots span.on { background: #ffd75e; transform: scale(1.25); }
+  .dots span.on { background: #8fc4ff; transform: scale(1.25); }
 </style>
 </head>
 <body>
@@ -274,7 +274,7 @@ async function renderH2H() {
       ${h2hRow(statVal(eA, "pointsFor"), "Goals scored", statVal(eO, "pointsFor"))}
       ${h2hRow(statVal(eA, "pointsAgainst"), "Goals conceded", statVal(eO, "pointsAgainst"), false)}
       <div class="statrow"><span class="v">${""}</span></div>
-      <div class="h2h-teams" style="margin-top:2px">${chips(ctx.ars.form)}<span style="color:#9c8a95;font-size:14px;font-weight:700;letter-spacing:2px">RECENT FORM</span>${chips(ctx.opp.form)}</div>`;
+      <div class="h2h-teams" style="margin-top:2px">${chips(ctx.ars.form)}<span style="color:#8fa3c4;font-size:14px;font-weight:700;letter-spacing:2px">RECENT FORM</span>${chips(ctx.opp.form)}</div>`;
   } catch (e) {
     $("h2h").innerHTML = `<div class="empty">Season stats unavailable</div>`;
   }

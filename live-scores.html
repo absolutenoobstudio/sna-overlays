@@ -9,8 +9,8 @@
 
   .panel {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(18,5,8,.90), rgba(8,3,5,.94));
-    border: 1px solid rgba(212,175,55,.45); border-radius: 14px;
+    background: linear-gradient(180deg, rgba(13, 24, 46,.90), rgba(7, 15, 31,.94));
+    border: 1px solid rgba(93, 160, 255,.45); border-radius: 14px;
     display: flex; flex-direction: column; overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,.5);
     opacity: 0; transition: opacity .7s;
@@ -19,10 +19,10 @@
 
   .head {
     flex: 0 0 auto; display: flex; align-items: baseline; justify-content: space-between;
-    padding: 2.2% 5% 1.6%; border-bottom: 1px solid rgba(212,175,55,.28);
+    padding: 2.2% 5% 1.6%; border-bottom: 1px solid rgba(93, 160, 255,.28);
   }
-  .head .t { color: #ffd75e; font-weight: 900; letter-spacing: .2em; text-transform: uppercase; }
-  .head .s { color: #9c8a95; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+  .head .t { color: #8fc4ff; font-weight: 900; letter-spacing: .2em; text-transform: uppercase; }
+  .head .s { color: #8fa3c4; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
   .head .s.on { color: #ff7b80; }
   .head .s.on::before {
     content: ""; display: inline-block; width: .62em; height: .62em; border-radius: 50%;
@@ -46,21 +46,21 @@
   .row.goal .sc { animation: goalpop 2.6s ease-out 1; }
   @keyframes goalpop {
     0%, 12% { color: #8ef2a5; transform: scale(1.28); }
-    100%    { color: #ffd75e; transform: scale(1); }
+    100%    { color: #8fc4ff; transform: scale(1); }
   }
 
   .side { flex: 1; display: flex; align-items: center; gap: 6%; min-width: 0; }
   .side.a { justify-content: flex-end; }
   .side img { height: 58%; max-height: 24px; object-fit: contain; }
   .side .ab { color: #fff; font-weight: 800; letter-spacing: .04em; white-space: nowrap; }
-  .sc { flex: 0 0 22%; text-align: center; color: #ffd75e; font-weight: 900; white-space: nowrap;
+  .sc { flex: 0 0 22%; text-align: center; color: #8fc4ff; font-weight: 900; white-space: nowrap;
         display: inline-block; }
-  .st { flex: 0 0 20%; text-align: right; color: #9c8a95; font-weight: 800; white-space: nowrap; }
+  .st { flex: 0 0 20%; text-align: right; color: #8fa3c4; font-weight: 800; white-space: nowrap; }
   .st.on { color: #ff7b80; }
-  .st.ht { color: #ffd75e; }
+  .st.ht { color: #8fc4ff; }
 
   .msg { flex: 1; display: flex; align-items: center; justify-content: center;
-         color: #9c8a95; font-weight: 700; text-align: center; padding: 6%; }
+         color: #8fa3c4; font-weight: 700; text-align: center; padding: 6%; }
 </style>
 </head>
 <body>
