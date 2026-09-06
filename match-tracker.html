@@ -40,6 +40,25 @@
   }
   @keyframes blink { 50% { opacity: .25; } }
 
+  /* ---------- possession donut ---------- */
+  .poss {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+    gap: 1.1em; padding: 2.6% 4% .6%;
+  }
+  .poss .pv { font-weight: 900; font-size: 1.45em; min-width: 2.5em; text-align: center; }
+  .poss .pv.a { color: #ff7b80; }
+  .poss .pv.b { color: #7cc0ff; }
+  .ringwrap { position: relative; width: 5em; height: 5em; flex: 0 0 auto; }
+  .ringwrap svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+  .ringwrap circle { fill: none; stroke-width: 12; }
+  .ringwrap .bg  { stroke: #3f7fd0; }
+  .ringwrap .arc { stroke: #ef0107; transition: stroke-dasharray 1.1s cubic-bezier(.4,0,.2,1); }
+  .ringlbl {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #9c8a95; font-weight: 900; font-size: .46em; letter-spacing: .1em;
+    text-transform: uppercase; text-align: center; line-height: 1.1;
+  }
+
   /* ---------- stat bars ---------- */
   .stats { flex: 0 0 auto; padding: 2.2% 4% 1.6%; display: flex; flex-direction: column; gap: .55em; }
   .srow { display: flex; align-items: center; gap: .6em; }
@@ -96,6 +115,17 @@
       <div class="sc" id="score">0 - 0</div>
       <div class="side b"><span class="ab" id="abB">—</span><img id="logoB" alt=""></div>
       <div class="clock" id="clock">—</div>
+    </div>
+    <div class="poss">
+      <span class="pv a" id="possA">&ndash;</span>
+      <span class="ringwrap">
+        <svg viewBox="0 0 100 100">
+          <circle class="bg" cx="50" cy="50" r="40"></circle>
+          <circle class="arc" id="arc" cx="50" cy="50" r="40" stroke-dasharray="0 999"></circle>
+        </svg>
+        <span class="ringlbl">Possession</span>
+      </span>
+      <span class="pv b" id="possB">&ndash;</span>
     </div>
     <div class="stats" id="stats"></div>
     <div class="feedwrap">
@@ -172,14 +202,28 @@ function statOf(team, name) {
   return isFinite(v) ? v : 0;
 }
 
+// possession gets the ring; these are counts, so they stay as bars
 const STATS = [
-  ["possessionPct", "Possession", true],
-  ["totalShots", "Shots", false],
-  ["shotsOnTarget", "On target", false],
-  ["wonCorners", "Corners", false],
+  ["totalShots", "Shots"],
+  ["shotsOnTarget", "On target"],
+  ["wonCorners", "Corners"],
 ];
 
+const RING = 2 * Math.PI * 40;      // circumference of the r=40 circle
+
+function renderPossession(tA, tB) {
+  const a = statOf(tA, "possessionPct"), b = statOf(tB, "possessionPct");
+  const tot = a + b;
+  // if ESPN has not published possession yet, leave the ring empty rather than
+  // drawing a misleading 50/50
+  $("possA").textContent = tot ? a + "%" : "\u2013";
+  $("possB").textContent = tot ? b + "%" : "\u2013";
+  const share = tot ? (a / tot) : 0;
+  $("arc").style.strokeDasharray = `${(share * RING).toFixed(2)} ${RING.toFixed(2)}`;
+}
+
 function renderStats(tA, tB) {
+  renderPossession(tA, tB);
   $("stats").innerHTML = STATS.map(([key, label]) => {
     const a = statOf(tA, key), b = statOf(tB, key);
     const tot = a + b;
@@ -225,9 +269,14 @@ function renderFeed(commentary) {
   seenMax = Math.max(seenMax, ...list.map(c => c.sequence ?? 0));
   firstPass = false;
 
-  // Commentary lines wrap to different heights, so a fixed count either leaves
-  // a gap or clips the last line mid-sentence. Drop whole lines from the bottom
-  // until what is left actually fits the box.
+}
+
+/* Commentary lines wrap to different heights, so a fixed count either leaves a
+   gap or clips the last line mid-sentence. Drop whole lines from the bottom
+   until what is left fits. This has to run AFTER autoSize, because changing the
+   font size changes how tall the lines are - trimming first then resizing put
+   the overflow straight back. */
+function trimFeed() {
   const box = $("feed");
   let guard = 40;
   while (box.scrollHeight > box.clientHeight && box.children.length > 1 && guard--) {
@@ -272,18 +321,20 @@ async function tick() {
     const teams = j.boxscore?.teams ?? [];
     const tA = teams.find(t => String(t.team?.id) === String(home?.team?.id));
     const tB = teams.find(t => String(t.team?.id) === String(away?.team?.id));
-    if (tA && tB) renderStats(tA, tB); else $("stats").innerHTML = "";
+    if (tA && tB) renderStats(tA, tB);
+    else { $("stats").innerHTML = ""; $("arc").style.strokeDasharray = "0 999"; }
     renderFeed(j.commentary);
   } catch (e) {
     $("feed").innerHTML = '<div class="msg">Commentary unavailable.</div>';
   }
 
   autoSize();
+  trimFeed();
   $("panel").classList.add("show");
   setTimeout(tick, live ? 20000 : 60000);
 }
 
-addEventListener("resize", autoSize);
+addEventListener("resize", () => { autoSize(); trimFeed(); });
 tick();
 </script>
 </body>
