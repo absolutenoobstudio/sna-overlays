@@ -127,10 +127,20 @@
   <div class="ad-cap" id="adCap">Download Last Cards &mdash; link &amp; QR on screen</div>
 
   <script>
-  // ?analysis - the left column holds the cameras instead of the video ad
-  if (location.search.includes("analysis")) {
+  // ?noad     - no video ad at all; the stats zone moves to the centre so the
+  //             left column is not left empty
+  // ?analysis - no video ad either, but the zone STAYS right because the left
+  //             column holds the cameras in the analysis scenes
+  const Q0 = location.search;
+  if (Q0.includes("noad") || Q0.includes("analysis")) {
     document.getElementById("adSlot").style.display = "none";
     document.getElementById("adCap").style.display = "none";
+  }
+  if (Q0.includes("noad") && !Q0.includes("analysis")) {
+    // zone is 1250 wide on a 1920 canvas -> centred at 335
+    document.querySelector(".zone").style.left = "335px";
+  }
+  if (Q0.includes("analysis")) {
     document.getElementById("boardTitle").textContent = "ANALYSIS";
     document.getElementById("subtitle").textContent = "Stats breakdown";
   }

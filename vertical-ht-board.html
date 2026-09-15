@@ -333,9 +333,11 @@ async function refreshData() {
   } catch (e) {}
 }
 
-const NO_AD = location.search.includes("noad");
-// analysis scenes reuse this board, so retitle it when the ad phase is off
-if (NO_AD) {
+// ?noad     - skip the ad phase, keep the HALF-TIME title
+// ?analysis - skip the ad phase AND retitle, for the analysis scenes
+const ANALYSIS = location.search.includes("analysis");
+const NO_AD = location.search.includes("noad") || ANALYSIS;
+if (ANALYSIS) {
   addEventListener("DOMContentLoaded", () => {
     const t = document.querySelector(".ht-title");
     if (t) t.textContent = "ANALYSIS";
@@ -349,7 +351,8 @@ async function cycle() {
     board.classList.remove("adphase");
     for (let p = 0; p < 3; p++) {
       showPage(p);
-      $("nextinfo").textContent = p === 2 ? "Up next: Last Cards — our new mobile game" : "";
+      // only trail the ad if there is actually going to be one
+      $("nextinfo").textContent = (p === 2 && !NO_AD) ? "Up next: Last Cards — our new mobile game" : "";
       await new Promise(r => setTimeout(r, STAT_PAGE_SECONDS * 1000));
     }
     if (NO_AD) continue;          // ?noad - analysis scenes keep the stats up
