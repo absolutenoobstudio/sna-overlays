@@ -96,18 +96,9 @@
     color: #fff; font-size: 38px; font-weight: 900; letter-spacing: 16px;
     text-transform: uppercase; text-shadow: 0 0 22px rgba(212,175,55,.65), 0 3px 12px rgba(0,0,0,.95);
   }
-  .club {
-    margin-top: 6px; font-size: 96px; font-weight: 900; letter-spacing: 4px;
-    text-transform: uppercase; line-height: 1;
-    background: linear-gradient(100deg, #b8892a 0%, #ffe9a3 28%, #ffd75e 42%, #b8892a 60%, #ffd75e 85%, #b8892a 100%);
-    background-size: 260% 100%;
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 26px rgba(212,175,55,.45));
-    animation: shimmer 6s ease-in-out infinite;
-  }
   @keyframes shimmer { 50% { background-position: 100% 0; } }
 
-  .badges { margin-top: 88px; display: flex; gap: 18px; justify-content: center; }
+  .badges { margin-top: 150px; display: flex; gap: 18px; justify-content: center; }
   .badge {
     padding: 14px 32px; border-radius: 10px;
     background: rgba(212,175,55,.14); border: 2px solid rgba(212,175,55,.6);
@@ -198,7 +189,6 @@
     <div class="top">
       <img class="crest" id="crest" src="sna-gaming-logo.png" alt="">
       <div class="chan" id="chan">SNA Football</div>
-      <div class="club" id="club">NoobGamers</div>
       <div class="badges">
         <span class="badge" id="game">EA FC 27</span>
         <span class="badge alt" id="mode">Pro Clubs</span>
@@ -244,7 +234,7 @@
     if (!v) { el.style.display = "none"; return; }
     el.innerHTML = gold(v);
   };
-  ["chan", "club", "game", "mode"].forEach(function (k) { set(k, k); });
+  ["chan", "game", "mode"].forEach(function (k) { set(k, k); });
   if (Q.has("nocrest")) document.getElementById("crest").style.display = "none";
   // the join plate: ?join= renames the club on it, ?joinlbl= changes the label
   set("joinwho", "join");
