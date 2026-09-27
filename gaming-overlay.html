@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+         display: flex; align-items: stretch; }
+
+  /* Gold on black to match the EA FC scene. The football overlays are navy -
+     that difference is deliberate, see READ-ME-FIRST. */
+  .bar {
+    flex: 1; display: flex; align-items: center; gap: 2%;
+    padding: 0 2.2%;
+    background: linear-gradient(180deg, rgba(13,11,7,.94), rgba(5,5,5,.96));
+    border-top: 2px solid rgba(212,175,55,.55);
+    box-shadow: 0 -8px 30px rgba(0,0,0,.6);
+    position: relative; overflow: hidden;
+    opacity: 0; transform: translateY(18px);
+    animation: rise .8s cubic-bezier(.2,1,.3,1) .3s forwards;
+  }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+
+  /* slow gold sweep so the bar is not dead for a whole stream */
+  .bar::after {
+    content: ""; position: absolute; top: 0; bottom: 0; width: 220px;
+    background: linear-gradient(90deg, transparent, rgba(255,215,94,.13), transparent);
+    animation: sweep 9s ease-in-out infinite; will-change: transform;
+  }
+  @keyframes sweep {
+    0%, 55% { transform: translateX(-240px); }
+    100%    { transform: translateX(105vw); }
+  }
+
+  .mark { color: #fff; font-weight: 900; letter-spacing: .16em; white-space: nowrap; }
+  .mark span { color: #ffd75e; }
+
+  .sep { width: 2px; align-self: stretch; margin: 1.1% 0;
+         background: linear-gradient(180deg, transparent, rgba(212,175,55,.75), transparent); }
+
+  .game {
+    color: #ffd75e; font-weight: 900; letter-spacing: .2em;
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .live {
+    display: flex; align-items: center; gap: .5em;
+    color: #e8dfd4; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .live::before {
+    content: ""; width: .6em; height: .6em; border-radius: 50%;
+    background: #ff3b3b; animation: blink 1.4s infinite;
+  }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  /* rotating promo strip - the only part that changes */
+  .msgwrap { flex: 1; min-width: 0; position: relative; height: 100%; }
+  .msg {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end;
+    color: #fff; font-weight: 800; letter-spacing: .06em; white-space: nowrap;
+    opacity: 0; transform: translateY(40%);
+    transition: opacity .55s, transform .55s;
+  }
+  .msg.on { opacity: 1; transform: none; }
+  .msg b { color: #ffd75e; }
+</style>
+</head>
+<body>
+  <div class="bar" id="bar">
+    <span class="mark" id="mark">SNA <span>FOOTBALL</span></span>
+    <span class="sep"></span>
+    <span class="game" id="game">EA FC 27</span>
+    <span class="sep"></span>
+    <span class="live" id="live">Live</span>
+    <span class="msgwrap"><span class="msg" id="msg"></span></span>
+  </div>
+
+<script>
+/* Bottom bar for the gaming scene: branding plus a promo strip that cycles on
+   its own, so it needs nothing from the streamer mid-game.
+
+   ?game=      what to show in the middle    (default "EA FC 27")
+   ?msgs=      pipe-separated rotation       (use *stars* for the gold words)
+   ?every=     seconds per message           (default 12)
+   ?nolive     hide the LIVE dot                                            */
+
+const Q = new URLSearchParams(location.search);
+const GAME = Q.get("game") || "EA FC 27";
+const EVERY = Math.max(4, parseInt(Q.get("every") || "12", 10)) * 1000;
+const MSGS = (Q.get("msgs") ||
+  "*FOLLOW* for more EA FC|YouTube  *SNA Football*|TikTok  *@snafootball*|" +
+  "Playing *EA FC 27*|*Last Cards* - out now on iOS & Android"
+).split("|").map(s => s.trim()).filter(Boolean);
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+// *word* -> gold
+const fmt = s => esc(s).replace(/\*([^*]+)\*/g, "<b>$1</b>");
+
+$("game").textContent = GAME;
+if (Q.has("nolive")) $("live").style.display = "none";
+
+// scale off the bar's own height so one file works at any source size
+function autoSize() {
+  const h = window.innerHeight;
+  const base = Math.max(10, h * 0.34);
+  $("mark").style.fontSize = base + "px";
+  $("game").style.fontSize = (base * 0.82) + "px";
+  $("live").style.fontSize = (base * 0.62) + "px";
+  $("msg").style.fontSize  = (base * 0.78) + "px";
+}
+
+let i = -1;
+function next() {
+  const el = $("msg");
+  el.classList.remove("on");
+  setTimeout(() => {
+    i = (i + 1) % MSGS.length;
+    el.innerHTML = fmt(MSGS[i]);
+    el.classList.add("on");
+  }, 560);          // let the old one clear before swapping
+}
+
+addEventListener("resize", autoSize);
+autoSize();
+next();
+setInterval(next, EVERY);
+</script>
+</body>
+</html>
