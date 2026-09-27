@@ -20,62 +20,81 @@
     -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   }
 
+  /* black base. The gold light is a separate layer so it can drift without
+     repainting the gradient every frame - transform only, which the compositor
+     handles. This runs for hours on stream, so everything animated here moves
+     with transform or opacity and nothing animates a background. */
   .base {
     position: absolute; inset: 0;
-    background:
-      radial-gradient(900px 620px at 50% 4%, rgba(93,160,255,.30), transparent 62%),
-      radial-gradient(900px 620px at 50% 96%, rgba(60,120,220,.20), transparent 62%),
-      linear-gradient(180deg, #0d182e 0%, #0a1426 48%, #070f1f 100%);
+    background: linear-gradient(180deg, #0d0b07 0%, #090807 48%, #050505 100%);
+  }
+  .glow {
+    position: absolute; width: 1400px; height: 900px; left: 50%; margin-left: -700px;
+    background: radial-gradient(closest-side, rgba(212,175,55,.30), transparent 70%);
+    will-change: transform;
+  }
+  .glow.t { top: -320px; animation: driftT 26s ease-in-out infinite alternate; }
+  .glow.b { bottom: -320px; animation: driftB 31s ease-in-out infinite alternate; }
+  @keyframes driftT {
+    from { transform: translate(-130px, -20px) scale(1);    opacity: .85; }
+    to   { transform: translate( 130px,  40px) scale(1.14); opacity: 1; }
+  }
+  @keyframes driftB {
+    from { transform: translate( 120px,  30px) scale(1.1);  opacity: .8; }
+    to   { transform: translate(-120px, -30px) scale(.94);  opacity: 1; }
   }
 
   /* faint pitch-line texture so the empty areas are not flat */
   .grid {
-    position: absolute; inset: 0; opacity: .5;
+    position: absolute; inset: -84px; opacity: .5;
+    animation: gridDrift 34s linear infinite;
+    will-change: transform;
     background:
-      repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 2px, transparent 2px 84px),
-      repeating-linear-gradient(0deg,  rgba(255,255,255,.022) 0 2px, transparent 2px 84px);
+      repeating-linear-gradient(90deg, rgba(212,175,55,.045) 0 2px, transparent 2px 84px),
+      repeating-linear-gradient(0deg,  rgba(212,175,55,.045) 0 2px, transparent 2px 84px);
   }
+  /* exactly one tile, so the loop is invisible */
+  @keyframes gridDrift { to { transform: translate(84px, 84px); } }
+
   .grain { position: absolute; inset: 0; opacity: .45;
     background: repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 4px); }
 
   /* angled accent wedges, top and bottom */
   .wedge {
-    position: absolute; left: -60px; right: -60px; height: 280px; opacity: .38;
-    background: linear-gradient(180deg, rgba(93,160,255,.55), rgba(20,60,130,0));
+    position: absolute; left: -60px; right: -60px; height: 280px; opacity: .34;
+    background: linear-gradient(180deg, rgba(212,175,55,.5), rgba(90,70,20,0));
   }
   .wedge.t { top: 300px; clip-path: polygon(0 0, 100% 16%, 100% 100%, 0 84%); }
   .wedge.b { bottom: 300px; clip-path: polygon(0 16%, 100% 0, 100% 84%, 0 100%); }
 
   .stripes {
-    position: absolute; left: 0; right: 0; height: 54px; opacity: .22;
-    background: repeating-linear-gradient(135deg, #5da0ff 0 18px, transparent 18px 36px);
+    position: absolute; left: -120px; right: -120px; height: 54px; opacity: .26;
+    animation: flow 3.4s linear infinite; will-change: transform;
+    background: repeating-linear-gradient(135deg, #d4af37 0 18px, transparent 18px 36px);
     -webkit-mask-image: linear-gradient(90deg, transparent, black 14%, black 86%, transparent);
     mask-image: linear-gradient(90deg, transparent, black 14%, black 86%, transparent);
   }
-  .stripes.t { top: 236px; } .stripes.b { bottom: 236px; }
+  .stripes.t { top: 240px; } .stripes.b { bottom: 240px; animation-direction: reverse; }
+  /* 36px period on a 135deg gradient = 50.91px along X for a seamless loop */
+  @keyframes flow { to { transform: translateX(50.91px); } }
 
   /* ---------- top block ---------- */
-  .brand {
-    position: absolute; left: 0; right: 0; top: 96px; text-align: center;
-  }
+  .brand { position: absolute; left: 0; right: 0; top: 122px; text-align: center; }
   .brand .mark {
-    color: #fff; font-size: 74px; font-weight: 900; letter-spacing: 12px;
-    text-shadow: 0 0 34px rgba(93,160,255,.6), 0 6px 18px rgba(0,0,0,.8);
+    color: #fff; font-size: 76px; font-weight: 900; letter-spacing: 12px;
+    text-shadow: 0 0 36px rgba(212,175,55,.55), 0 6px 18px rgba(0,0,0,.85);
   }
-  .brand .mark span { color: #8fc4ff; }
-  .brand .sub {
-    margin-top: 12px; color: #8fa3c4; font-size: 21px; font-weight: 800;
-    letter-spacing: 9px; text-transform: uppercase;
-  }
+  .brand .mark span { color: #ffd75e; }
+
   .game {
-    position: absolute; left: 0; right: 0; top: 470px; text-align: center;
-    color: #fff; font-size: 46px; font-weight: 900; letter-spacing: 7px;
+    position: absolute; left: 0; right: 0; top: 446px; text-align: center;
+    color: #fff; font-size: 48px; font-weight: 900; letter-spacing: 7px;
   }
-  .game b { color: #8fc4ff; }
+  .game b { color: #ffd75e; }
   .game .pill {
-    display: inline-block; margin-top: 16px; padding: 9px 30px;
-    border: 2px solid rgba(93,160,255,.6); border-radius: 999px;
-    color: #8fc4ff; font-size: 19px; font-weight: 900; letter-spacing: 6px;
+    display: inline-block; margin-top: 18px; padding: 9px 30px;
+    border: 2px solid rgba(212,175,55,.65); border-radius: 999px;
+    color: #ffd75e; font-size: 19px; font-weight: 900; letter-spacing: 6px;
   }
 
   /* ---------- bottom block ---------- */
@@ -85,36 +104,56 @@
   }
   .foot .cta {
     color: #fff; font-size: 40px; font-weight: 900; letter-spacing: 6px;
-    text-shadow: 0 4px 16px rgba(0,0,0,.8);
+    text-shadow: 0 4px 16px rgba(0,0,0,.85);
+    animation: pulse 4.5s ease-in-out infinite;
   }
-  .foot .cta b { color: #8fc4ff; }
+  .foot .cta b { color: #ffd75e; }
+  @keyframes pulse { 50% { opacity: .68; } }
   .foot .handles { display: flex; gap: 20px; }
   .foot .tag {
     padding: 12px 26px; border-radius: 12px;
-    background: rgba(93,160,255,.12); border: 1px solid rgba(93,160,255,.4);
-    color: #dce6f5; font-size: 23px; font-weight: 800; letter-spacing: 2px;
+    background: rgba(212,175,55,.10); border: 1px solid rgba(212,175,55,.42);
+    color: #e8dfd4; font-size: 23px; font-weight: 800; letter-spacing: 2px;
   }
-  /* slow shimmer so the dead space is not static for a whole stream */
-  .foot .cta { animation: pulse 4.5s ease-in-out infinite; }
-  @keyframes pulse { 50% { opacity: .68; } }
 
   /* ---------- the window frame, drawn OUTSIDE .art so it rings the hole ---- */
   .rail {
     position: absolute; left: 0; right: 0; height: 4px;
-    background: linear-gradient(90deg, transparent, #5da0ff, transparent);
-    box-shadow: 0 0 22px rgba(93,160,255,.8);
+    background: linear-gradient(90deg, transparent, #d4af37, transparent);
+    box-shadow: 0 0 22px rgba(212,175,55,.75);
   }
   .rail.t { top: 652px; } .rail.b { top: 1264px; }
-  .corner { position: absolute; width: 56px; height: 56px; border: 5px solid #8fc4ff; }
-  .corner.tl { left: 0;  top: 660px;     border-right: 0; border-bottom: 0; }
-  .corner.tr { right: 0; top: 660px;     border-left: 0;  border-bottom: 0; }
-  .corner.bl { left: 0;  top: 1212px;    border-right: 0; border-top: 0; }
-  .corner.br { right: 0; top: 1212px;    border-left: 0;  border-top: 0; }
+  .rail::after {
+    content: ""; position: absolute; top: -3px; bottom: -3px; width: 260px;
+    background: linear-gradient(90deg, transparent, rgba(255,215,94,.95), transparent);
+    filter: blur(1px); animation: sweep 6.5s ease-in-out infinite;
+    will-change: transform;
+  }
+  .rail.b::after { animation-delay: 3.25s; animation-direction: reverse; }
+  @keyframes sweep {
+    0%   { transform: translateX(-280px); opacity: 0; }
+    12%  { opacity: 1; }
+    88%  { opacity: 1; }
+    100% { transform: translateX(1080px); opacity: 0; }
+  }
+  .corner {
+    position: absolute; width: 56px; height: 56px; border: 5px solid #ffd75e;
+    animation: cornerPulse 3.2s ease-in-out infinite;
+  }
+  @keyframes cornerPulse {
+    50% { opacity: .5; box-shadow: 0 0 18px rgba(255,215,94,.55); }
+  }
+  .corner.tl { left: 0;  top: 660px;  border-right: 0; border-bottom: 0; }
+  .corner.tr { right: 0; top: 660px;  border-left: 0;  border-bottom: 0; }
+  .corner.bl { left: 0;  top: 1212px; border-right: 0; border-top: 0; }
+  .corner.br { right: 0; top: 1212px; border-left: 0;  border-top: 0; }
 </style>
 </head>
 <body>
   <div class="art">
     <div class="base"></div>
+    <div class="glow t"></div>
+    <div class="glow b"></div>
     <div class="grid"></div>
     <div class="wedge t"></div>
     <div class="wedge b"></div>
@@ -123,7 +162,6 @@
 
     <div class="brand">
       <div class="mark">SNA <span>FOOTBALL</span></div>
-      <div class="sub">Sam &amp; Noob</div>
     </div>
     <div class="game">
       EA <b>FC 27</b>
