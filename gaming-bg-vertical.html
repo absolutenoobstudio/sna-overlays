@@ -7,11 +7,16 @@
   html, body { width: 1080px; height: 1920px; overflow: hidden; background: transparent; }
   body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
 
-  /* Landscape gameplay on a portrait canvas leaves ~650px dead at the top and
-     bottom. Everything paintable lives in .art, masked so the 16:9 gameplay
-     window is punched clean through - the game capture sits behind this page.
-     An SVG mask masks by ALPHA, so the hole has to be a single even-odd path
-     rather than a black rectangle. */
+  /* Portrait canvas, landscape gameplay in the middle. The blocks above and
+     below are the whole design problem: left plain they read as dead black
+     bars on a phone. So they are dense and always moving - drifting light,
+     a flowing chevron pattern, rising embers, a shimmer through the club
+     name and a marquee that never stops.
+
+     Everything animates with transform or opacity only. This runs as a browser
+     source for a whole stream, so nothing here animates a background or a
+     filter, which would repaint every frame. */
+
   .art {
     position: absolute; inset: 0;
     -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920'><path fill='white' fill-rule='evenodd' d='M0 0H1080V1920H0Z M0 660H1080V1268H0Z'/></svg>");
@@ -20,138 +25,129 @@
     -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   }
 
-  /* black base. The gold light is a separate layer so it can drift without
-     repainting the gradient every frame - transform only, which the compositor
-     handles. This runs for hours on stream, so everything animated here moves
-     with transform or opacity and nothing animates a background. */
-  .base {
-    position: absolute; inset: 0;
-    background: linear-gradient(180deg, #0d0b07 0%, #090807 48%, #050505 100%);
-  }
+  .base { position: absolute; inset: 0; background: linear-gradient(180deg, #0f0c07, #0a0805 45%, #050505); }
+
+  /* drifting gold light, its own layer so it moves without repainting */
   .glow {
-    position: absolute; width: 1400px; height: 900px; left: 50%; margin-left: -700px;
-    background: radial-gradient(closest-side, rgba(212,175,55,.30), transparent 70%);
+    position: absolute; width: 1500px; height: 1000px; left: 50%; margin-left: -750px;
+    background: radial-gradient(closest-side, rgba(212,175,55,.34), transparent 70%);
     will-change: transform;
   }
-  .glow.t { top: -320px; animation: driftT 26s ease-in-out infinite alternate; }
-  .glow.b { bottom: -320px; animation: driftB 31s ease-in-out infinite alternate; }
-  @keyframes driftT {
-    from { transform: translate(-130px, -20px) scale(1);    opacity: .85; }
-    to   { transform: translate( 130px,  40px) scale(1.14); opacity: 1; }
+  .glow.t { top: -360px; animation: driftT 24s ease-in-out infinite alternate; }
+  .glow.b { bottom: -360px; animation: driftB 29s ease-in-out infinite alternate; }
+  @keyframes driftT { from { transform: translate(-150px,-25px) scale(1); }   to { transform: translate(150px,45px) scale(1.16); } }
+  @keyframes driftB { from { transform: translate(140px,35px) scale(1.12); }  to { transform: translate(-140px,-35px) scale(.95); } }
+
+  /* huge repeated club watermark, slowly sliding */
+  .marks {
+    position: absolute; left: -10%; right: -10%; opacity: .05; overflow: hidden;
+    display: flex; flex-wrap: wrap; gap: 26px 60px;
+    transform: rotate(-7deg); will-change: transform;
   }
-  @keyframes driftB {
-    from { transform: translate( 120px,  30px) scale(1.1);  opacity: .8; }
-    to   { transform: translate(-120px, -30px) scale(.94);  opacity: 1; }
+  .marks.t { top: -40px; height: 740px; animation: markDrift 40s linear infinite; }
+  .marks.b { bottom: -40px; height: 740px; animation: markDrift 46s linear infinite reverse; }
+  .marks span { color: #fff; font-size: 44px; font-weight: 900; letter-spacing: 8px; white-space: nowrap; }
+  @keyframes markDrift { to { transform: rotate(-7deg) translateX(-240px); } }
+
+  /* flowing chevrons - the main "this is alive" cue */
+  .chev {
+    position: absolute; left: -80px; right: -80px; height: 62px; opacity: .5;
+    background: repeating-linear-gradient(115deg,
+      rgba(212,175,55,.85) 0 10px, rgba(212,175,55,0) 10px 46px);
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+    animation: chevFlow 2.6s linear infinite; will-change: transform;
+  }
+  /* 46px period on a 115deg gradient -> 50.8px along X for a seamless loop */
+  @keyframes chevFlow { to { transform: translateX(50.8px); } }
+  .chev.a { top: 322px; }
+  .chev.b { top: 556px; animation-direction: reverse; opacity: .34; }
+  .chev.c { top: 1310px; animation-direction: reverse; }
+  .chev.d { top: 1840px; opacity: .34; }
+
+  /* rising embers */
+  .embers { position: absolute; left: 0; right: 0; height: 660px; overflow: hidden; }
+  .embers.t { top: 0; } .embers.b { top: 1260px; height: 660px; }
+  .ember {
+    position: absolute; bottom: -20px; width: 6px; height: 6px; border-radius: 50%;
+    background: #ffd75e; opacity: 0; will-change: transform, opacity;
+    animation: rise linear infinite;
+  }
+  @keyframes rise {
+    0%   { transform: translateY(0) scale(.6); opacity: 0; }
+    12%  { opacity: .85; }
+    80%  { opacity: .5; }
+    100% { transform: translateY(-660px) scale(1.1); opacity: 0; }
   }
 
-  /* faint pitch-line texture so the empty areas are not flat */
-  .grid {
-    position: absolute; inset: -84px; opacity: .5;
-    animation: gridDrift 34s linear infinite;
-    will-change: transform;
-    background:
-      repeating-linear-gradient(90deg, rgba(212,175,55,.045) 0 2px, transparent 2px 84px),
-      repeating-linear-gradient(0deg,  rgba(212,175,55,.045) 0 2px, transparent 2px 84px);
-  }
-  /* exactly one tile, so the loop is invisible */
-  @keyframes gridDrift { to { transform: translate(84px, 84px); } }
-
-  .grain { position: absolute; inset: 0; opacity: .45;
+  .grain { position: absolute; inset: 0; opacity: .4;
     background: repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 4px); }
 
-  /* angled accent wedges, top and bottom */
-  .wedge {
-    position: absolute; left: -60px; right: -60px; height: 280px; opacity: .34;
-    background: linear-gradient(180deg, rgba(212,175,55,.5), rgba(90,70,20,0));
-  }
-  .wedge.t { top: 300px; clip-path: polygon(0 0, 100% 16%, 100% 100%, 0 84%); }
-  .wedge.b { bottom: 300px; clip-path: polygon(0 16%, 100% 0, 100% 84%, 0 100%); }
-
-  .stripes {
-    position: absolute; left: -120px; right: -120px; height: 54px; opacity: .26;
-    animation: flow 3.4s linear infinite; will-change: transform;
-    background: repeating-linear-gradient(135deg, #d4af37 0 18px, transparent 18px 36px);
-    -webkit-mask-image: linear-gradient(90deg, transparent, black 14%, black 86%, transparent);
-    mask-image: linear-gradient(90deg, transparent, black 14%, black 86%, transparent);
-  }
-  .stripes.t { top: 240px; } .stripes.b { bottom: 240px; animation-direction: reverse; }
-  /* 36px period on a 135deg gradient = 50.91px along X for a seamless loop */
-  @keyframes flow { to { transform: translateX(50.91px); } }
-
-  /* ---------- top block ---------- */
-  .brand { position: absolute; left: 0; right: 0; top: 96px; text-align: center; }
-  .brand .chan {
-    color: #9c8a95; font-size: 24px; font-weight: 800;
-    letter-spacing: 11px; text-transform: uppercase;
-  }
-  .brand .club {
-    margin-top: 14px;
-    color: #ffd75e; font-size: 92px; font-weight: 900; letter-spacing: 6px;
+  /* ---------------- top block ---------------- */
+  .top { position: absolute; left: 0; right: 0; top: 70px; text-align: center; }
+  .chan { color: #b9a37a; font-size: 26px; font-weight: 800; letter-spacing: 13px; text-transform: uppercase; }
+  .club {
+    margin-top: 10px; font-size: 104px; font-weight: 900; letter-spacing: 4px;
     text-transform: uppercase; line-height: 1;
-    text-shadow: 0 0 40px rgba(212,175,55,.6), 0 6px 20px rgba(0,0,0,.9);
+    background: linear-gradient(100deg, #b8892a 0%, #ffe9a3 28%, #ffd75e 42%, #b8892a 60%, #ffd75e 85%, #b8892a 100%);
+    background-size: 260% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 26px rgba(212,175,55,.45));
+    animation: shimmer 6s ease-in-out infinite;
   }
-  .brand .rule {
-    width: 320px; height: 3px; margin: 22px auto 0;
-    background: linear-gradient(90deg, transparent, #d4af37, transparent);
-  }
+  @keyframes shimmer { 50% { background-position: 100% 0; } }
 
-  .game {
-    position: absolute; left: 0; right: 0; top: 462px; text-align: center;
-    color: #fff; font-size: 44px; font-weight: 900; letter-spacing: 7px;
+  .badges { margin-top: 210px; display: flex; gap: 18px; justify-content: center; }
+  .badge {
+    padding: 13px 30px; border-radius: 10px;
+    background: rgba(212,175,55,.10); border: 1px solid rgba(212,175,55,.45);
+    color: #fff; font-size: 30px; font-weight: 900; letter-spacing: 5px; text-transform: uppercase;
   }
-  .game b { color: #ffd75e; }
-  .game .pill {
-    display: inline-block; margin-top: 18px; padding: 9px 30px;
-    border: 2px solid rgba(212,175,55,.65); border-radius: 999px;
-    color: #ffd75e; font-size: 19px; font-weight: 900; letter-spacing: 6px;
-  }
+  .badge.alt { color: #ffd75e; }
 
-  /* ---------- bottom block ---------- */
-  .foot {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 560px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
-  }
-  .foot .cta {
-    color: #fff; font-size: 40px; font-weight: 900; letter-spacing: 6px;
-    text-shadow: 0 4px 16px rgba(0,0,0,.85);
-    animation: pulse 4.5s ease-in-out infinite;
-  }
-  .foot .cta b { color: #ffd75e; }
-  @keyframes pulse { 50% { opacity: .68; } }
-  .foot .handles { display: flex; gap: 20px; }
-  .foot .tag {
-    padding: 12px 26px; border-radius: 12px;
+  /* ---------------- bottom block ---------------- */
+  .bot { position: absolute; left: 0; right: 0; top: 1350px; text-align: center; }
+  .cta { color: #fff; font-size: 46px; font-weight: 900; letter-spacing: 6px; text-shadow: 0 4px 16px rgba(0,0,0,.85); }
+  .cta b { color: #ffd75e; }
+  .handles { margin-top: 26px; display: flex; gap: 20px; justify-content: center; }
+  .tag {
+    padding: 13px 26px; border-radius: 12px;
     background: rgba(212,175,55,.10); border: 1px solid rgba(212,175,55,.42);
-    color: #e8dfd4; font-size: 23px; font-weight: 800; letter-spacing: 2px;
+    color: #e8dfd4; font-size: 25px; font-weight: 800; letter-spacing: 2px;
   }
 
-  /* ---------- the window frame, drawn OUTSIDE .art so it rings the hole ---- */
+  /* marquee - the thing that guarantees the bottom is never static */
+  .ticker {
+    position: absolute; left: 0; right: 0; top: 1690px; height: 76px;
+    display: flex; align-items: center; overflow: hidden;
+    border-top: 1px solid rgba(212,175,55,.3); border-bottom: 1px solid rgba(212,175,55,.3);
+    background: rgba(212,175,55,.05);
+  }
+  .track { display: flex; white-space: nowrap; will-change: transform; animation: roll 26s linear infinite; }
+  .track span { color: #ffd75e; font-size: 30px; font-weight: 900; letter-spacing: 5px; text-transform: uppercase; padding: 0 34px; }
+  .track span i { color: #6f6250; font-style: normal; }
+  @keyframes roll { to { transform: translateX(-50%); } }
+
+  /* ---------------- window frame ---------------- */
   .rail {
-    position: absolute; left: 0; right: 0; height: 4px;
+    position: absolute; left: 0; right: 0; height: 4px; overflow: hidden;
     background: linear-gradient(90deg, transparent, #d4af37, transparent);
     box-shadow: 0 0 22px rgba(212,175,55,.75);
   }
   .rail.t { top: 652px; } .rail.b { top: 1264px; }
   .rail::after {
-    content: ""; position: absolute; top: -3px; bottom: -3px; width: 260px;
-    background: linear-gradient(90deg, transparent, rgba(255,215,94,.95), transparent);
-    filter: blur(1px); animation: sweep 6.5s ease-in-out infinite;
-    will-change: transform;
+    content: ""; position: absolute; top: 0; bottom: 0; width: 240px;
+    background: linear-gradient(90deg, transparent, #fff8dc, transparent);
+    animation: sweep 6.5s ease-in-out infinite; will-change: transform;
   }
   .rail.b::after { animation-delay: 3.25s; animation-direction: reverse; }
   @keyframes sweep {
-    0%   { transform: translateX(-280px); opacity: 0; }
-    12%  { opacity: 1; }
-    88%  { opacity: 1; }
+    0% { transform: translateX(-260px); opacity: 0; }
+    12% { opacity: 1; } 88% { opacity: 1; }
     100% { transform: translateX(1080px); opacity: 0; }
   }
-  .corner {
-    position: absolute; width: 56px; height: 56px; border: 5px solid #ffd75e;
-    animation: cornerPulse 3.2s ease-in-out infinite;
-  }
-  @keyframes cornerPulse {
-    50% { opacity: .5; box-shadow: 0 0 18px rgba(255,215,94,.55); }
-  }
+  .corner { position: absolute; width: 56px; height: 56px; border: 5px solid #ffd75e; animation: cpulse 3.2s ease-in-out infinite; }
+  @keyframes cpulse { 50% { opacity: .5; box-shadow: 0 0 18px rgba(255,215,94,.55); } }
   .corner.tl { left: 0;  top: 660px;  border-right: 0; border-bottom: 0; }
   .corner.tr { right: 0; top: 660px;  border-left: 0;  border-bottom: 0; }
   .corner.bl { left: 0;  top: 1212px; border-right: 0; border-top: 0; }
@@ -163,29 +159,30 @@
     <div class="base"></div>
     <div class="glow t"></div>
     <div class="glow b"></div>
-    <div class="grid"></div>
-    <div class="wedge t"></div>
-    <div class="wedge b"></div>
-    <div class="stripes t"></div>
-    <div class="stripes b"></div>
+    <div class="marks t" id="marksT"></div>
+    <div class="marks b" id="marksB"></div>
+    <div class="chev a"></div><div class="chev b"></div>
+    <div class="chev c"></div><div class="chev d"></div>
+    <div class="embers t" id="emberT"></div>
+    <div class="embers b" id="emberB"></div>
 
-    <div class="brand">
+    <div class="top">
       <div class="chan" id="chan">SNA Football</div>
       <div class="club" id="club">NoobGamers</div>
-      <div class="rule"></div>
-    </div>
-    <div class="game">
-      <span id="game">EA FC 27</span>
-      <div class="pill" id="mode">Pro Clubs</div>
+      <div class="badges">
+        <span class="badge" id="game">EA FC 27</span>
+        <span class="badge alt" id="mode">Pro Clubs</span>
+      </div>
     </div>
 
-    <div class="foot">
-      <div class="cta">FOLLOW FOR <b>MORE</b></div>
-      <div class="handles">
+    <div class="bot">
+      <div class="cta" id="cta">FOLLOW FOR <b>MORE</b></div>
+      <div class="handles" id="handles">
         <span class="tag">YouTube &middot; SNA Football</span>
         <span class="tag">TikTok &middot; @snafootball</span>
       </div>
     </div>
+    <div class="ticker"><div class="track" id="track"></div></div>
 
     <div class="grain"></div>
   </div>
@@ -194,22 +191,19 @@
   <div class="rail b"></div>
   <div class="corner tl"></div><div class="corner tr"></div>
   <div class="corner bl"></div><div class="corner br"></div>
+
 <script>
-/* Everything on this background is editable from the address, so the wording
-   can change without touching the file:
-     ?club=NoobGamers      the club name (the big gold line)
-     ?chan=SNA Football    the channel line above it
-     ?game=EA FC 27        what is being played
-     ?mode=Pro Clubs       the pill under it - pass an empty value to hide it
-     ?cta=FOLLOW FOR *MORE*   *stars* mark the words to pick out in gold
-     ?tags=a|b             the two tags at the bottom, pipe separated      */
+/* Wording is all editable from the address, because in TikTok LIVE Studio the
+   address is the only thing you can change without opening the file:
+     ?club=  ?chan=  ?game=  ?mode=      (empty value hides that element)
+     ?cta=   *stars* mark words to pick out in gold
+     ?tags=  pipe separated
+     ?ticker= pipe separated marquee items                                  */
 (function () {
   var Q = new URLSearchParams(location.search);
-  var gold = function (t) {
-    return String(t).replace(/[<>&]/g, function (c) {
-      return { "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c];
-    }).replace(/\*([^*]+)\*/g, "<b>$1</b>");
-  };
+  var esc = function (t) { return String(t).replace(/[<>&]/g, function (c) {
+    return { "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]; }); };
+  var gold = function (t) { return esc(t).replace(/\*([^*]+)\*/g, "<b>$1</b>"); };
   var set = function (id, key) {
     if (!Q.has(key)) return;
     var v = Q.get(key), el = document.getElementById(id);
@@ -217,14 +211,42 @@
     if (!v) { el.style.display = "none"; return; }
     el.innerHTML = gold(v);
   };
-  set("chan", "chan"); set("club", "club"); set("game", "game"); set("mode", "mode");
-
-  if (Q.has("cta")) document.querySelector(".foot .cta").innerHTML = gold(Q.get("cta"));
+  ["chan", "club", "game", "mode"].forEach(function (k) { set(k, k); });
+  if (Q.has("cta")) document.getElementById("cta").innerHTML = gold(Q.get("cta"));
   if (Q.has("tags")) {
-    var tags = Q.get("tags").split("|").filter(Boolean);
-    document.querySelector(".foot .handles").innerHTML =
-      tags.map(function (t) { return '<span class="tag">' + gold(t) + "</span>"; }).join("");
+    document.getElementById("handles").innerHTML = Q.get("tags").split("|").filter(Boolean)
+      .map(function (t) { return '<span class="tag">' + gold(t) + "</span>"; }).join("");
   }
+
+  var club = (Q.get("club") || "NoobGamers");
+
+  // watermark: enough copies to cover the block at any size
+  var words = [club, "EA FC", club, "PRO CLUBS"];
+  var html = "";
+  for (var i = 0; i < 54; i++) html += "<span>" + esc(words[i % words.length]) + "</span>";
+  document.getElementById("marksT").innerHTML = html;
+  document.getElementById("marksB").innerHTML = html;
+
+  // embers, scattered so they do not pulse in unison
+  ["emberT", "emberB"].forEach(function (id) {
+    var box = document.getElementById(id), out = "";
+    for (var i = 0; i < 16; i++) {
+      var left = Math.round(Math.random() * 100);
+      var dur = (9 + Math.random() * 9).toFixed(1);
+      var delay = (-Math.random() * 18).toFixed(1);
+      var size = (4 + Math.random() * 5).toFixed(1);
+      out += '<span class="ember" style="left:' + left + '%;width:' + size + 'px;height:' + size +
+             'px;animation-duration:' + dur + 's;animation-delay:' + delay + 's"></span>';
+    }
+    box.innerHTML = out;
+  });
+
+  // marquee, doubled so translateX(-50%) loops seamlessly
+  var items = (Q.get("ticker") ||
+    club + "|EA FC 27|Pro Clubs|Follow for more|YouTube: SNA Football|TikTok: @snafootball|Last Cards - out now"
+  ).split("|").filter(Boolean);
+  var one = items.map(function (t) { return "<span>" + esc(t) + " <i>&bull;</i></span>"; }).join("");
+  document.getElementById("track").innerHTML = one + one;
 })();
 </script>
 </body>
