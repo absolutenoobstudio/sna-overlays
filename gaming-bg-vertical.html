@@ -84,10 +84,20 @@
     background: repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 4px); }
 
   /* ---------------- top block ---------------- */
-  .top { position: absolute; left: 0; right: 0; top: 70px; text-align: center; }
-  .chan { color: #b9a37a; font-size: 26px; font-weight: 800; letter-spacing: 13px; text-transform: uppercase; }
+  .top { position: absolute; left: 0; right: 0; top: 34px; text-align: center; }
+  .crest {
+    width: 210px; height: 210px; display: block; margin: 0 auto 4px;
+    filter: drop-shadow(0 0 26px rgba(212,175,55,.55));
+    animation: crestFloat 5.5s ease-in-out infinite;
+  }
+  @keyframes crestFloat { 50% { transform: translateY(-9px); } }
+  /* was small grey and sat in the glow - now white, larger, and readable */
+  .chan {
+    color: #fff; font-size: 38px; font-weight: 900; letter-spacing: 16px;
+    text-transform: uppercase; text-shadow: 0 0 22px rgba(212,175,55,.65), 0 3px 12px rgba(0,0,0,.95);
+  }
   .club {
-    margin-top: 10px; font-size: 104px; font-weight: 900; letter-spacing: 4px;
+    margin-top: 6px; font-size: 96px; font-weight: 900; letter-spacing: 4px;
     text-transform: uppercase; line-height: 1;
     background: linear-gradient(100deg, #b8892a 0%, #ffe9a3 28%, #ffd75e 42%, #b8892a 60%, #ffd75e 85%, #b8892a 100%);
     background-size: 260% 100%;
@@ -97,7 +107,7 @@
   }
   @keyframes shimmer { 50% { background-position: 100% 0; } }
 
-  .badges { margin-top: 210px; display: flex; gap: 18px; justify-content: center; }
+  .badges { margin-top: 128px; display: flex; gap: 18px; justify-content: center; }
   .badge {
     padding: 14px 32px; border-radius: 10px;
     background: rgba(212,175,55,.14); border: 2px solid rgba(212,175,55,.6);
@@ -186,6 +196,7 @@
     <div class="embers b" id="emberB"></div>
 
     <div class="top">
+      <img class="crest" id="crest" src="sna-gaming-logo.png" alt="">
       <div class="chan" id="chan">SNA Football</div>
       <div class="club" id="club">NoobGamers</div>
       <div class="badges">
@@ -234,6 +245,7 @@
     el.innerHTML = gold(v);
   };
   ["chan", "club", "game", "mode"].forEach(function (k) { set(k, k); });
+  if (Q.has("nocrest")) document.getElementById("crest").style.display = "none";
   // the join plate: ?join= renames the club on it, ?joinlbl= changes the label
   set("joinwho", "join");
   set("joinlbl", "joinlbl");

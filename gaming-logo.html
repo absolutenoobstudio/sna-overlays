@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1024px; height: 1024px; overflow: hidden; background: transparent; }
+  body { display: flex; align-items: center; justify-content: center; }
+  svg { width: 1024px; height: 1024px; display: block; }
+
+  /* The gaming twin of the SNA crest: same gold-neon shield language as the
+     football badge, but the mics become a controller and the silhouettes wear
+     headsets. Drawn as vector rather than generated, so the wordmark is sharp
+     at any size and the colours match the rest of the gold theme exactly. */
+  .glow  { filter: url(#neon); }
+  .plate { fill: #0a0806; }
+  .line  { fill: none; stroke: #ffd75e; stroke-width: 9; stroke-linejoin: round; stroke-linecap: round; }
+  .thin  { fill: none; stroke: #d4af37; stroke-width: 5; stroke-linejoin: round; stroke-linecap: round; }
+  .solid { fill: #ffd75e; }
+  .band  { fill: #d4af37; }
+  .txt   { fill: #fff; font-family: "Segoe UI Variable Display","Segoe UI",system-ui,sans-serif; font-weight: 900; text-anchor: middle; }
+  .txtg  { fill: #ffd75e; font-family: "Segoe UI Variable Display","Segoe UI",system-ui,sans-serif; font-weight: 900; text-anchor: middle; }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="neon" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="goldv" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ffe9a3"/>
+      <stop offset="45%" stop-color="#ffd75e"/>
+      <stop offset="100%" stop-color="#b8892a"/>
+    </linearGradient>
+  </defs>
+
+  <g class="glow">
+    <!-- shield -->
+    <path class="plate"
+      d="M512 78 L906 196 L906 566 C906 762 726 872 512 948 C298 872 118 762 118 566 L118 196 Z"/>
+    <path class="line"
+      d="M512 78 L906 196 L906 566 C906 762 726 872 512 948 C298 872 118 762 118 566 L118 196 Z"/>
+    <path class="thin"
+      d="M512 126 L862 230 L862 560 C862 730 700 830 512 900 C324 830 162 730 162 560 L162 230 Z"/>
+
+    <!-- top band: SNA -->
+    <path class="band" d="M214 254 H810 V258 H214 Z"/>
+    <text class="txt" x="512" y="232" font-size="92" letter-spacing="14">SNA</text>
+
+    <!-- left gamer: head, headset, shoulders -->
+    <g class="line">
+      <circle cx="374" cy="404" r="58"/>
+      <path d="M306 404 A68 68 0 0 1 442 404"/>       <!-- headset band -->
+      <path d="M302 396 v34 a16 16 0 0 0 32 0 v-34 z"/> <!-- ear cup -->
+      <path d="M296 520 c14-46 50-72 78-72 28 0 64 26 78 72"/>
+    </g>
+    <!-- right gamer, mirrored -->
+    <g class="line" transform="translate(1024,0) scale(-1,1)">
+      <circle cx="374" cy="404" r="58"/>
+      <path d="M306 404 A68 68 0 0 1 442 404"/>
+      <path d="M302 396 v34 a16 16 0 0 0 32 0 v-34 z"/>
+      <path d="M296 520 c14-46 50-72 78-72 28 0 64 26 78 72"/>
+    </g>
+
+    <!-- controller between them -->
+    <g class="line">
+      <path d="M452 452 h120 c26 0 40 16 46 38 l14 52 c6 24-8 40-28 40-16 0-26-10-36-22
+               l-16-20 h-84 l-16 20 c-10 12-20 22-36 22-20 0-34-16-28-40 l14-52
+               c6-22 20-38 46-38 z"/>
+      <path d="M478 492 h28 M492 478 v28"/>            <!-- d-pad -->
+    </g>
+    <circle class="solid" cx="556" cy="486" r="9"/>
+    <circle class="solid" cx="578" cy="504" r="9"/>
+
+    <!-- football at the point -->
+    <g class="thin">
+      <circle cx="512" cy="640" r="34"/>
+      <path d="M512 612 l22 16 -8 26 h-28 l-8-26 z"/>
+    </g>
+
+    <!-- bottom bands -->
+    <path class="band" d="M214 706 H810 V710 H214 Z"/>
+    <text class="txtg" x="512" y="786" font-size="70" letter-spacing="1">NOOBGAMERS</text>
+    <text class="txt"  x="512" y="842" font-size="38" letter-spacing="11">PRO CLUBS</text>
+  </g>
+</svg>
+</body>
+</html>
