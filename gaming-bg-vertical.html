@@ -40,7 +40,7 @@
 
   /* huge repeated club watermark, slowly sliding */
   .marks {
-    position: absolute; left: -10%; right: -10%; opacity: .05; overflow: hidden;
+    position: absolute; left: -10%; right: -10%; opacity: .032; overflow: hidden;
     display: flex; flex-wrap: wrap; gap: 26px 60px;
     transform: rotate(-7deg); will-change: transform;
   }
@@ -99,17 +99,36 @@
 
   .badges { margin-top: 210px; display: flex; gap: 18px; justify-content: center; }
   .badge {
-    padding: 13px 30px; border-radius: 10px;
-    background: rgba(212,175,55,.10); border: 1px solid rgba(212,175,55,.45);
-    color: #fff; font-size: 30px; font-weight: 900; letter-spacing: 5px; text-transform: uppercase;
+    padding: 14px 32px; border-radius: 10px;
+    background: rgba(212,175,55,.14); border: 2px solid rgba(212,175,55,.6);
+    color: #fff; font-size: 33px; font-weight: 900; letter-spacing: 5px; text-transform: uppercase;
   }
   .badge.alt { color: #ffd75e; }
 
   /* ---------------- bottom block ---------------- */
-  .bot { position: absolute; left: 0; right: 0; top: 1350px; text-align: center; }
-  .cta { color: #fff; font-size: 46px; font-weight: 900; letter-spacing: 6px; text-shadow: 0 4px 16px rgba(0,0,0,.85); }
-  .cta b { color: #ffd75e; }
-  .handles { margin-top: 26px; display: flex; gap: 20px; justify-content: center; }
+  .bot { position: absolute; left: 0; right: 0; top: 1318px; text-align: center; }
+  /* the whole point of the stream: viewers joining the club. Loudest thing in
+     the lower block, on a solid plate so it holds up on a phone. */
+  .join {
+    display: inline-block; padding: 20px 46px 24px; border-radius: 18px;
+    background: linear-gradient(180deg, rgba(212,175,55,.20), rgba(212,175,55,.07));
+    border: 3px solid rgba(255,215,94,.85);
+    box-shadow: 0 0 40px rgba(212,175,55,.35), inset 0 0 30px rgba(0,0,0,.45);
+    animation: joinPulse 3.4s ease-in-out infinite;
+  }
+  @keyframes joinPulse {
+    50% { box-shadow: 0 0 62px rgba(212,175,55,.6), inset 0 0 30px rgba(0,0,0,.45); }
+  }
+  .join .lbl {
+    color: #fff; font-size: 40px; font-weight: 900; letter-spacing: 11px;
+    text-transform: uppercase; text-shadow: 0 3px 12px rgba(0,0,0,.9);
+  }
+  .join .who {
+    margin-top: 6px; color: #ffd75e; font-size: 82px; font-weight: 900;
+    letter-spacing: 3px; line-height: 1;
+    text-shadow: 0 0 30px rgba(212,175,55,.65), 0 4px 16px rgba(0,0,0,.9);
+  }
+  .handles { margin-top: 30px; display: flex; gap: 20px; justify-content: center; }
   .tag {
     padding: 13px 26px; border-radius: 12px;
     background: rgba(212,175,55,.10); border: 1px solid rgba(212,175,55,.42);
@@ -176,7 +195,10 @@
     </div>
 
     <div class="bot">
-      <div class="cta" id="cta">FOLLOW FOR <b>MORE</b></div>
+      <div class="join">
+        <div class="lbl" id="joinlbl">Join Club</div>
+        <div class="who" id="joinwho">NoobGamers</div>
+      </div>
       <div class="handles" id="handles">
         <span class="tag">YouTube &middot; SNA Football</span>
         <span class="tag">TikTok &middot; @snafootball</span>
@@ -212,7 +234,12 @@
     el.innerHTML = gold(v);
   };
   ["chan", "club", "game", "mode"].forEach(function (k) { set(k, k); });
-  if (Q.has("cta")) document.getElementById("cta").innerHTML = gold(Q.get("cta"));
+  // the join plate: ?join= renames the club on it, ?joinlbl= changes the label
+  set("joinwho", "join");
+  set("joinlbl", "joinlbl");
+  if (!Q.has("join") && Q.has("club")) {
+    document.getElementById("joinwho").innerHTML = gold(Q.get("club"));
+  }
   if (Q.has("tags")) {
     document.getElementById("handles").innerHTML = Q.get("tags").split("|").filter(Boolean)
       .map(function (t) { return '<span class="tag">' + gold(t) + "</span>"; }).join("");
@@ -243,7 +270,8 @@
 
   // marquee, doubled so translateX(-50%) loops seamlessly
   var items = (Q.get("ticker") ||
-    club + "|EA FC 27|Pro Clubs|Follow for more|YouTube: SNA Football|TikTok: @snafootball|Last Cards - out now"
+    "Join Club: " + club + "|EA FC 27 Pro Clubs|Follow for more|YouTube: SNA Football|" +
+    "TikTok: @snafootball|Join Club: " + club + "|Last Cards - out now"
   ).split("|").filter(Boolean);
   var one = items.map(function (t) { return "<span>" + esc(t) + " <i>&bull;</i></span>"; }).join("");
   document.getElementById("track").innerHTML = one + one;
