@@ -187,9 +187,9 @@ async function tick() {
     $("clock").classList.remove("live");
   } else {
     const d = new Date(m.ev.date);
-    const hhmm = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const hhmm = d.toLocaleTimeString("en-GB", { timeZone: "Europe/London",  hour: "2-digit", minute: "2-digit" });
     $("clock").textContent = COMPACT ? hhmm
-      : d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" }) + " " + hhmm;
+      : d.toLocaleDateString("en-GB", { timeZone: "Europe/London",  weekday: "short", day: "numeric", month: "short" }) + " " + hhmm;
     $("clock").classList.remove("live");
   }
 

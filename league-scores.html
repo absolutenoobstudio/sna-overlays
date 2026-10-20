@@ -105,7 +105,7 @@ function statusLabel(ev) {
   if (state === "in") return { text: st.displayClock || "LIVE", live: true };
   if (state === "post") return { text: "FT", live: false };
   const d = new Date(ev.date);
-  return { text: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), live: false };
+  return { text: d.toLocaleTimeString("en-GB", { timeZone: "Europe/London",  hour: "2-digit", minute: "2-digit" }), live: false };
 }
 
 function row(ev) {

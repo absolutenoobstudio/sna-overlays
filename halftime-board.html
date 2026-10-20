@@ -334,7 +334,7 @@ function statusLabel(ev) {
     return { text: st.displayClock || "LIVE", live: true };
   }
   if (state === "post") return { text: "FT", live: false };
-  return { text: new Date(ev.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), live: false };
+  return { text: new Date(ev.date).toLocaleTimeString("en-GB", { timeZone: "Europe/London",  hour: "2-digit", minute: "2-digit" }), live: false };
 }
 
 /* Polling tells you the score, never that it just CHANGED - so remember it and

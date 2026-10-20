@@ -185,7 +185,7 @@ async function render() {
   if (state === "pre") {
     const d = new Date(ctx.ev.date);
     $("hSc").textContent = ""; $("aSc").textContent = "";
-    document.querySelector(".sc .d").textContent = d.toLocaleDateString([], { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    document.querySelector(".sc .d").textContent = d.toLocaleDateString("en-GB", { timeZone: "Europe/London",  day: "numeric", month: "short" }) + " " + d.toLocaleTimeString("en-GB", { timeZone: "Europe/London",  hour: "2-digit", minute: "2-digit" });
     document.querySelector(".sc .d").style.fontSize = "26px";
   } else {
     const hs = parseInt(home.score ?? "0", 10), as = parseInt(away.score ?? "0", 10);

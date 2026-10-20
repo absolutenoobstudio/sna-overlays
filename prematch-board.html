@@ -196,7 +196,7 @@ function renderHeader() {
   const away = ctx.comp.competitors.find(c => c.homeAway === "away");
   $("fixture").innerHTML = `<img src="${home.team.logo}"><span class="tm">${home.team.abbreviation}</span><span class="vs">VS</span><span class="tm">${away.team.abbreviation}</span><img src="${away.team.logo}">`;
   const d = new Date(ctx.ev.date);
-  const when = d.toLocaleDateString([], { weekday: "long", day: "numeric", month: "short" }) + " • " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const when = d.toLocaleDateString("en-GB", { timeZone: "Europe/London",  weekday: "long", day: "numeric", month: "short" }) + " • " + d.toLocaleTimeString("en-GB", { timeZone: "Europe/London",  hour: "2-digit", minute: "2-digit" });
   const venue = ctx.comp.venue ? `${ctx.comp.venue.fullName}${ctx.comp.venue.address?.city ? ", " + ctx.comp.venue.address.city : ""}` : "";
   $("meta").innerHTML = `${ctx.leagueName} • ${when} ${venue ? "• 🏟 <b>" + venue + "</b>" : ""}`;
   kickoff = d;

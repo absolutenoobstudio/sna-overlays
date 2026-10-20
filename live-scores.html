@@ -104,7 +104,7 @@ const flashing = new Set();       // eventIds mid-flash, so a re-render keeps it
 function statusOf(ev) {
   const t = ev.status?.type, state = t?.state;
   if (state === "pre") {
-    return { txt: new Date(ev.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), cls: "" };
+    return { txt: new Date(ev.date).toLocaleTimeString("en-GB", { timeZone: "Europe/London",  hour: "2-digit", minute: "2-digit" }), cls: "" };
   }
   if (state === "post") return { txt: "FT", cls: "" };
   // Half-time is a live state with the clock parked on 45. Match the STATUS

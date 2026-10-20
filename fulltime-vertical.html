@@ -163,7 +163,7 @@ async function render() {
     const d = new Date(ctx.ev.date);
     $("hSc").textContent = ""; $("aSc").textContent = "";
     const dEl = document.querySelector(".sc .d");
-    dEl.textContent = d.toLocaleDateString([], { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    dEl.textContent = d.toLocaleDateString("en-GB", { timeZone: "Europe/London",  day: "numeric", month: "short" }) + " " + d.toLocaleTimeString("en-GB", { timeZone: "Europe/London",  hour: "2-digit", minute: "2-digit" });
     dEl.style.fontSize = "24px";
   } else {
     const hs = parseInt(home.score ?? "0", 10), as = parseInt(away.score ?? "0", 10);

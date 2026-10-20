@@ -312,7 +312,7 @@ async function tick() {
   const live = state === "in";
   const desc = m.ev.status?.type?.shortDetail || "";
   $("clock").textContent = state === "pre"
-      ? new Date(m.ev.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      ? new Date(m.ev.date).toLocaleTimeString("en-GB", { timeZone: "Europe/London",  hour: "2-digit", minute: "2-digit" })
       : state === "post" ? "FT"
       : (m.ev.status?.type?.name === "STATUS_HALFTIME" ? "HT" : (m.ev.status?.displayClock || desc));
   $("clock").classList.toggle("live", live);

@@ -186,7 +186,7 @@ async function build() {
       const c = ev.competitions?.[0]?.competitors ?? [];
       const h = c.find(x => x.homeAway === "home"), a = c.find(x => x.homeAway === "away");
       const s = ev.status?.type;
-      const when = s?.state === "pre" ? (ev.date || "").slice(11, 16)
+      const when = s?.state === "pre" ? new Date(ev.date).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })
                  : s?.state === "in" ? (ev.status?.displayClock || "LIVE") : "FT";
       return `${h?.team?.abbreviation ?? "?"} ${h?.score ?? 0}-${a?.score ?? 0} ${a?.team?.abbreviation ?? "?"} (${when})`;
     });

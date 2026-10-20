@@ -133,8 +133,8 @@ async function findMatch() {
 
 function fmtKickoff(d) {
   const dt = new Date(d);
-  const day = dt.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
-  const time = dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const day = dt.toLocaleDateString("en-GB", { timeZone: "Europe/London",  weekday: "short", day: "numeric", month: "short" });
+  const time = dt.toLocaleTimeString("en-GB", { timeZone: "Europe/London",  hour: "2-digit", minute: "2-digit" });
   return `${day} ${time}`;
 }
 
