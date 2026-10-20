@@ -82,7 +82,7 @@ const Q = new URLSearchParams(location.search);
 const PX_PER_SEC = Number(Q.get("speed") || 95);   // scroll speed
 const REFRESH_MS = 60000;
 
-async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
 
 // Same picker as every other board: ignore anything that finished more than 36
 // hours ago, so last season's results can never crawl across the bottom.

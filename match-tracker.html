@@ -155,7 +155,7 @@ const LEAGUES = ["eng.1", "uefa.champions", "uefa.europa", "eng.fa", "eng.league
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
-async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
 
 // scale everything off the panel so it fits whatever box it is given
 function autoSize() {

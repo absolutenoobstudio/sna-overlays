@@ -116,7 +116,7 @@ const STAT_PAGE_SECONDS = 13;   // 3 pages x 13s = 39s of stats
 const AD_SECONDS = 20;          // then ~1 full loop of the 18s ad
 const $ = (id) => document.getElementById(id);
 
-async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
 
 let ctx = null;
 

@@ -102,7 +102,7 @@ const DATES = Q.get("testdate");
 const COMPACT = Q.has("compact");
 if (COMPACT) document.addEventListener("DOMContentLoaded", () => document.body.classList.add("compact"));
 
-async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
 const $ = id => document.getElementById(id);
 
 function pick(found) {

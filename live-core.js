@@ -6,6 +6,9 @@
    2. teamScoreboard() - a competition's scoreboard guaranteed to contain the
       followed team's next match in it. Used by every overlay that follows
       Arsenal or the rivals. See "FINDING A TEAM'S MATCH" below.
+   3. fixCodes() - corrects ESPN club codes that read wrong in the UK
+      (Bayern "MUN" -> BAY, Man United "MAN" -> MUN, Man City "MNC" -> MCI).
+      Every page's jget() runs its ESPN responses through it.
 
    Previously each page carried its own copy of this logic; it is subtle
    enough that the copies were going to drift apart.
@@ -45,10 +48,32 @@
 
   const tracked = new Map();   // eventId -> [[teamId, officialGamesPlayed], ...]
 
+  /* ESPN's club codes are American-built and three of them read wrong on a
+     UK stream - worst of all, ESPN calls Bayern "MUN", which here means Man
+     United, while calling Man United "MAN". Keyed by ESPN team id with the
+     code ESPN currently sends, so a code is only rewritten when BOTH match:
+     safe to run twice, and if ESPN ever fixes a code itself we leave it be. */
+  const CODES = {
+    "132": ["MUN", "BAY"],   // Bayern Munich
+    "360": ["MAN", "MUN"],   // Manchester United
+    "382": ["MNC", "MCI"],   // Manchester City
+  };
+
+  // Walks any ESPN payload (scoreboard, summary, standings) in place.
+  function fixCodes(x) {
+    if (Array.isArray(x)) { for (const v of x) fixCodes(v); return x; }
+    if (x && typeof x === "object") {
+      const c = CODES[x.id];
+      if (c && x.abbreviation === c[0]) x.abbreviation = c[1];
+      for (const k in x) { const v = x[k]; if (v && typeof v === "object") fixCodes(v); }
+    }
+    return x;
+  }
+
   async function jget(url) {
     const r = await fetch(url);
     if (!r.ok) throw new Error(r.status);
-    return r.json();
+    return fixCodes(await r.json());
   }
 
   function statNum(entry, name) {
@@ -263,5 +288,5 @@
     return base;
   }
 
-  global.LiveCore = { version: 2, liveStandings, compare, statNum, teamScoreboard, espnDay };
+  global.LiveCore = { version: 3, liveStandings, compare, statNum, teamScoreboard, espnDay, fixCodes };
 })(window);

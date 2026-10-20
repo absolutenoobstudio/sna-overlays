@@ -61,7 +61,7 @@ const TEAM_ID = "359";
 const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
 const $ = (id) => document.getElementById(id);
 const DATES = new URLSearchParams(location.search).get("testdate");
-async function jget(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status);return r.json();}
+async function jget(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status);const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j;}
 let ctx=null, kickoff=null;
 
 async function findMatch(){

@@ -81,7 +81,7 @@ const OURS = Q.get("us") || "359";                 // Arsenal, highlighted red
 const HILITE = (Q.get("hilite") || "").split(",").filter(Boolean);  // extra ids, green
 const LIMIT = parseInt(Q.get("limit") || "20", 10);
 
-async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
 

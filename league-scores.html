@@ -66,7 +66,7 @@ const TEAM_ID = "359";
 const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
 const panel = document.getElementById("panel");
 
-async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
 
 // Which competition is Arsenal in right now? Live beats the soonest upcoming
 // beats one just finished - the same order every other overlay uses. This

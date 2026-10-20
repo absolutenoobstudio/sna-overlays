@@ -79,7 +79,7 @@ const Q = new URLSearchParams(location.search);
 const PAGE = (Q.get("page") || "overview").toLowerCase();
 const DATES = Q.get("testdate");
 
-async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
 
 function pickMatch(found, mode, keepOld) {
   if (!found || !found.length) return null;

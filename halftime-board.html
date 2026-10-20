@@ -169,7 +169,7 @@ const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup
 const PAGE_SECONDS = 14;
 const $ = (id) => document.getElementById(id);
 
-async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
 
 let ctx = null; // { lg, leagueName, ev, arsenal, opp }
 

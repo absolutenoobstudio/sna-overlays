@@ -82,7 +82,7 @@ const FORCE_LEAGUE = Q.get("league");                 // or: pin one competition
 const LEAGUES = (Q.get("search") || "eng.1,uefa.champions,uefa.europa,eng.fa,eng.league_cup")
                   .split(",").filter(Boolean);
 
-async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
 

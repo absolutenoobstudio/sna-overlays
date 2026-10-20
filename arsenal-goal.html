@@ -76,7 +76,7 @@ const TEAM_ID = "359";
 const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
 let matchRef = null, arsScore = null, oppScore = null, firstPoll = true;
 
-async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function jget(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
 
 // Same picker as the other boards: a match that finished more than 36 hours ago
 // is ignored, so the alert always tracks the live or next fixture.
