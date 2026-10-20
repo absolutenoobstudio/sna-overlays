@@ -134,6 +134,7 @@
     </div>
   </div>
 
+<script src="live-core.js"></script>
 <script>
 /* Live match tracker: running commentary + key stats, straight from ESPN's
    summary feed.
@@ -182,7 +183,7 @@ async function findMatch() {
   const found = [];
   for (const lg of LEAGUES) {
     try {
-      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      const j = await (window.LiveCore ? LiveCore.teamScoreboard(lg, TEAM, null) : jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`));
       for (const ev of j.events ?? []) {
         const comp = ev.competitions?.[0];
         const ids = (comp?.competitors ?? []).map(c => String(c.team?.id));

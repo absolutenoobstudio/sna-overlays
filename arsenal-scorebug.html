@@ -73,6 +73,7 @@
   </div>
   <div class="eventline" id="eventline"></div>
 
+<script src="live-core.js"></script>
 <script>
 const TEAM_ID = "359";
 const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
@@ -119,7 +120,7 @@ async function findMatch() {
   const found = [];
   for (const lg of LEAGUES) {
     try {
-      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      const j = await (window.LiveCore ? LiveCore.teamScoreboard(lg, TEAM_ID, null) : jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`));
       const compName = j.leagues?.[0]?.abbreviation || lg;
       for (const ev of j.events ?? []) {
         const comp = ev.competitions?.[0];

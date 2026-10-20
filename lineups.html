@@ -97,6 +97,7 @@
     <div class="subs" id="subs"></div>
   </div>
 
+<script src="live-core.js"></script>
 <script>
 /* Starting XI laid out on a pitch, from ESPN's rosters feed.
 
@@ -142,7 +143,7 @@ async function findMatch() {
   const found = [];
   for (const lg of LEAGUES) {
     try {
-      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`);
+      const j = await (window.LiveCore ? LiveCore.teamScoreboard(lg, TEAM, null) : jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`));
       for (const ev of j.events ?? []) {
         const ids = (ev.competitions?.[0]?.competitors ?? []).map(c => String(c.team?.id));
         const hit = FORCE_ID ? ev.id === FORCE_ID

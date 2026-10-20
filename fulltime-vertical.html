@@ -101,6 +101,7 @@
     <div class="sub">SAM &amp; NOOB · SNA FOOTBALL<br>play our game <b>LAST CARDS</b> — absolutenoobstudio.co.uk</div>
   </div>
 
+<script src="live-core.js"></script>
 <script>
 const TEAM_ID = "359";
 const LEAGUES = ["eng.1","uefa.champions","uefa.europa","eng.fa","eng.league_cup"];
@@ -134,7 +135,7 @@ async function findMatch() {
   const found = [];
   for (const lg of LEAGUES) {
     try {
-      const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard${DATES ? "?dates=" + DATES : ""}`);
+      const j = await (window.LiveCore ? LiveCore.teamScoreboard(lg, TEAM_ID, DATES) : jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard${DATES ? "?dates=" + DATES : ""}`));
       for (const ev of j.events ?? []) {
         const comp = ev.competitions?.[0];
         if (comp?.competitors?.some(c => String(c.team?.id) === TEAM_ID)) found.push({ lg, leagueName: j.leagues?.[0]?.abbreviation || lg, ev, comp });

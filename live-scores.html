@@ -69,6 +69,7 @@
     <div class="rows" id="rows"><div class="msg">Loading…</div></div>
   </div>
 
+<script src="live-core.js"></script>
 <script>
 const Q = new URLSearchParams(location.search);
 const MAX = parseInt(Q.get("max") || "10", 10);
@@ -199,7 +200,7 @@ async function pickCompetition(feeds) {
 async function render() {
   // one round trip per competition, all at once
   const feeds = await Promise.all(LEAGUES.map(async lg => {
-    try { return { lg, j: await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`) }; }
+    try { return { lg, j: await (window.LiveCore ? LiveCore.teamScoreboard(lg, RIVAL_MODE ? RIVALS : [FOLLOW], null) : jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`)) }; }
     catch (e) { return { lg, j: null }; }
   }));
 
@@ -214,6 +215,9 @@ async function render() {
       // leave out the match being watched - it is already in the scorebug
       if (ourMatch && ev.id === ourMatch.id) continue;
       if (!ourMatch && whoWeFollow(ev)) continue;
+      // fetched from another day only so the right competition gets picked;
+      // listed here it would pass tomorrow's tie off as tonight's
+      if (ev.extraDay) continue;
       all.push({ ev, lgOrder: 0 });
     }
   }

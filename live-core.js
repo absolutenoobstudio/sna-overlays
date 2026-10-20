@@ -1,9 +1,14 @@
 /* ===========================================================================
-   live-core.js - the shared live-league-table engine.
+   live-core.js - shared live-data helpers for the overlays.
 
-   Used by live-table.html, halftime-board.html and vertical-ht-board.html.
-   Previously each of those carried its own copy; the logic below is subtle
-   enough that three copies were going to drift apart.
+   1. liveStandings() - the live league table. Used by live-table.html,
+      halftime-board.html and vertical-ht-board.html.
+   2. teamScoreboard() - a competition's scoreboard guaranteed to contain the
+      followed team's next match in it. Used by every overlay that follows
+      Arsenal or the rivals. See "FINDING A TEAM'S MATCH" below.
+
+   Previously each page carried its own copy of this logic; it is subtle
+   enough that the copies were going to drift apart.
 
    WHY THIS EXISTS
    ESPN's standings endpoint only moves once a result is FINAL, so on its own
@@ -143,5 +148,120 @@
     return { rows, inPlay, degraded: false };
   }
 
-  global.LiveCore = { version: 1, liveStandings, compare, statNum };
+  /* -------------------------------------------------------------------------
+     FINDING A TEAM'S MATCH
+
+     Every overlay that follows Arsenal (or the rivals) asks each competition's
+     scoreboard for that team's match. But a competition's DEFAULT scoreboard
+     covers one "current" day only - and a different day per competition. In
+     October 2026 the Champions League window sat on the Tuesday ties while
+     Arsenal played on the Wednesday, the Premier League window sat on a Friday
+     game, and the only Arsenal match visible anywhere was a Carabao Cup tie a
+     week out - so every overlay announced that as the next fixture.
+
+     The team schedule lists fixtures across all competitions in date order.
+     teamScoreboard() reads it to learn the day of each team's next fixture in
+     each competition, asks that competition about that day as well as its
+     default window, and adds ONLY the followed teams' matches from the extra
+     day. Pages that list a whole competition (live scores, ticker) must not
+     have another day's other games mixed into today's.
+
+     Added matches carry ev.extraDay = "YYYYMMDD". They exist so an overlay
+     can FIND its team's next match; a page that lists a competition's games
+     should skip them, or tomorrow's tie shows up looking like tonight's.
+     ------------------------------------------------------------------------- */
+  const SB = "https://site.api.espn.com/apis/site/v2/sports/soccer/";
+  const schedules = new Map();   // teamId -> { at, days: Map(lg -> "YYYYMMDD"), pending }
+  const dayBoards = new Map();   // "lg/YYYYMMDD" -> { at, j }
+
+  // ESPN's ?dates= days run on US Eastern time
+  const ET = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York",
+                                                year: "numeric", month: "2-digit", day: "2-digit" });
+  const espnDay = (d) => ET.format(new Date(d)).replace(/-/g, "");
+
+  const involves = (ev, ids) => {
+    const cs = (ev.competitions && ev.competitions[0] && ev.competitions[0].competitors) || [];
+    return cs.some(c => ids.includes(String(c.team && c.team.id)));
+  };
+
+  // lg -> day of this team's soonest not-yet-finished fixture in it.
+  // Cached ten minutes: fixtures barely move and every overlay polls.
+  function fixtureDays(teamId) {
+    const hit = schedules.get(teamId);
+    if (hit && hit.pending) return hit.pending;
+    if (hit && Date.now() - hit.at < 10 * 60 * 1000) return Promise.resolve(hit.days);
+
+    const pending = (async () => {
+      const days = new Map();
+      try {
+        const s = await jget(SB + "all/teams/" + teamId + "/schedule?fixture=true");
+        const evs = (s.events || []).slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+        for (const e of evs) {
+          const lg = e.league && e.league.slug;
+          const st = e.competitions && e.competitions[0] && e.competitions[0].status &&
+                     e.competitions[0].status.type && e.competitions[0].status.type.state;
+          if (!lg || st === "post" || days.has(lg)) continue;
+          days.set(lg, espnDay(e.date));
+        }
+      } catch (e) { /* no schedule - callers still get the default windows */ }
+      schedules.set(teamId, { at: Date.now(), days, pending: null });
+      return days;
+    })();
+    schedules.set(teamId, { at: hit ? hit.at : 0, days: hit ? hit.days : new Map(), pending });
+    return pending;
+  }
+
+  // An extra day's board. Matchday is always fetched fresh so live scores
+  // never lag; a future day is cached for a minute.
+  async function dayBoard(lg, day) {
+    const key = lg + "/" + day, hit = dayBoards.get(key);
+    const today = espnDay(Date.now());
+    if (hit && day !== today && Date.now() - hit.at < 60 * 1000) return hit.j;
+    const j = await jget(SB + lg + "/scoreboard?dates=" + day);
+    dayBoards.set(key, { at: Date.now(), j });
+    return j;
+  }
+
+  /**
+   * A competition's scoreboard, extended so it is guaranteed to contain the
+   * next match of each followed team in that competition.
+   *   lg       ESPN league slug, e.g. "uefa.champions"
+   *   teamIds  one team id or a list (the rival overlays follow several)
+   *   testdate a ?testdate= value: when set, that day only, as before
+   * Same shape as the raw scoreboard. Throws only if the DEFAULT scoreboard
+   * fails, exactly like fetching it directly did.
+   */
+  async function teamScoreboard(lg, teamIds, testdate) {
+    if (testdate) return jget(SB + lg + "/scoreboard?dates=" + testdate);
+
+    const ids = [].concat(teamIds || []).map(String);
+    const [base, ...dayMaps] = await Promise.all(
+      [jget(SB + lg + "/scoreboard")].concat(ids.map(fixtureDays)));
+
+    const events = base.events || [];
+    const want = new Set();
+    ids.forEach((id, k) => {
+      const day = dayMaps[k].get(lg);
+      if (!day) return;
+      const covered = events.some(ev => involves(ev, [id]) && espnDay(ev.date) === day);
+      if (!covered) want.add(day);
+    });
+
+    const seen = new Set(events.map(ev => ev.id));
+    for (const day of want) {
+      try {
+        const extra = await dayBoard(lg, day);
+        for (const ev of extra.events || []) {
+          if (!seen.has(ev.id) && involves(ev, ids)) {
+            ev.extraDay = day;          // lets list pages tell these apart
+            events.push(ev); seen.add(ev.id);
+          }
+        }
+      } catch (e) { /* that day unavailable - keep the default window */ }
+    }
+    base.events = events;
+    return base;
+  }
+
+  global.LiveCore = { version: 2, liveStandings, compare, statNum, teamScoreboard, espnDay };
 })(window);
