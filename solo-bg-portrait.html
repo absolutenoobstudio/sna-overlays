@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  /* Portrait background for the SOLO football stream. Same family as the
+     match artwork (navy falling into crimson, gold frame, SNA watermark,
+     confetti) but with ONE camera window and room for the solo layout:
+       scorebug  40-284     (your 1000x244 box)
+       camera    300-880    put the camera here, on top (add ?window to the address
+                            for a transparent cut-out with a gold frame instead)
+       radar     940-1466   (the 1000x526 radar box)
+       branding  1500-1680  crest, name, handles
+       stats     1767+      (the 1080x153 stats box)
+     Everything animates with transform or opacity only: this runs for a whole
+     stream as a browser source, or is rendered to a video loop for TikTok. */
+
+  .art { position: absolute; inset: 0; }
+  .art.cut {
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920'><path fill='white' fill-rule='evenodd' d='M0 0H1080V1920H0Z M118 300H962a28 28 0 0 1 28 28V852a28 28 0 0 1-28 28H118a28 28 0 0 1-28-28V328a28 28 0 0 1 28-28Z'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920'><path fill='white' fill-rule='evenodd' d='M0 0H1080V1920H0Z M118 300H962a28 28 0 0 1 28 28V852a28 28 0 0 1-28 28H118a28 28 0 0 1-28-28V328a28 28 0 0 1 28-28Z'/></svg>");
+    -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  }
+
+  /* navy at the top, crimson through the middle, black at the foot - the
+     same fall-off as the match artwork */
+  .base { position: absolute; inset: 0;
+    background: linear-gradient(180deg, #0c1020 0%, #10162a 30%, #2a0d16 58%, #4a0e18 72%, #140608 88%, #070508 100%); }
+
+  /* drifting light, its own layer so it moves without repainting */
+  .glow { position: absolute; width: 1500px; height: 1000px; left: 50%; margin-left: -750px; will-change: transform; }
+  .glow.t { top: -380px; background: radial-gradient(closest-side, rgba(93,160,255,.20), transparent 70%); animation: driftT 24s ease-in-out infinite alternate; }
+  .glow.b { bottom: -300px; background: radial-gradient(closest-side, rgba(220,40,60,.30), transparent 70%); animation: driftB 29s ease-in-out infinite alternate; }
+  @keyframes driftT { from { transform: translate(-150px,-25px) scale(1); }   to { transform: translate(150px,45px) scale(1.16); } }
+  @keyframes driftB { from { transform: translate(140px,35px) scale(1.12); }  to { transform: translate(-140px,-35px) scale(.95); } }
+
+  /* the watermark, slowly sliding */
+  .marks {
+    position: absolute; left: -10%; right: -10%; opacity: .07; overflow: hidden;
+    display: flex; flex-wrap: wrap; gap: 30px 70px; transform: rotate(-7deg); will-change: transform;
+  }
+  .marks.t { top: -40px; height: 1000px; animation: markDrift 40s linear infinite; }
+  .marks.b { bottom: -40px; height: 1000px; animation: markDrift 46s linear infinite reverse; }
+  .marks span { color: #e8d9b0; font-size: 40px; font-weight: 900; letter-spacing: 7px; white-space: nowrap; }
+  @keyframes markDrift { to { transform: rotate(-7deg) translateX(-240px); } }
+
+  /* a flowing gold slash band above and below the radar slot */
+  .chev {
+    position: absolute; left: -80px; right: -80px; height: 40px; opacity: .28;
+    background: repeating-linear-gradient(115deg, rgba(212,175,55,.85) 0 8px, rgba(212,175,55,0) 8px 46px);
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+    animation: chevFlow 2.6s linear infinite; will-change: transform;
+  }
+  @keyframes chevFlow { to { transform: translateX(50.8px); } }
+  .chev.a { top: 898px; }
+  .chev.b { top: 1480px; animation-direction: reverse; }
+  .chev.c { display: none; } .chev.d { display: none; }
+
+  /* confetti, like the artwork's, drifting down the full height */
+  .embers { position: absolute; left: 0; right: 0; top: 0; height: 1920px; overflow: hidden; }
+  .embers.b { display: none; }
+  .ember {
+    position: absolute; top: -20px; width: 9px; height: 5px; border-radius: 1px;
+    opacity: 0; will-change: transform, opacity; animation: fall linear infinite;
+  }
+  .ember.g { background: #ffd75e; } .ember.w { background: #fff; } .ember.r { background: #e0262f; }
+  @keyframes fall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+    8%   { opacity: .9; }
+    85%  { opacity: .6; }
+    100% { transform: translateY(1960px) rotate(520deg); opacity: 0; }
+  }
+
+  .grain { position: absolute; inset: 0; opacity: .35;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 4px); }
+
+  /* ---------------- branding block, between the radar and the stats ---------------- */
+  .bot { position: absolute; left: 0; right: 0; top: 1484px; text-align: center; }
+  .row { display: flex; align-items: center; justify-content: center; gap: 26px; }
+  .crest { width: 150px; height: 150px; filter: drop-shadow(0 0 22px rgba(212,175,55,.5)); animation: crestFloat 5.5s ease-in-out infinite; }
+  @keyframes crestFloat { 50% { transform: translateY(-7px); } }
+  .words { text-align: left; }
+  .chan { color: #fff; font-size: 54px; font-weight: 900; letter-spacing: 9px; line-height: 1; text-transform: uppercase;
+          text-shadow: 0 0 22px rgba(212,175,55,.55), 0 3px 12px rgba(0,0,0,.95); }
+  .join { display: inline-block; margin-top: 10px; padding: 7px 18px; border-radius: 9px;
+          background: rgba(212,175,55,.14); border: 2px solid rgba(255,215,94,.7); animation: joinPulse 3.4s ease-in-out infinite; }
+  @keyframes joinPulse { 50% { box-shadow: 0 0 34px rgba(212,175,55,.5); } }
+  .join .who { color: #ffd75e; font-size: 24px; font-weight: 900; letter-spacing: 6px; text-transform: uppercase; }
+  .handles { margin-top: 12px; display: flex; gap: 16px; justify-content: center; }
+  .tag { padding: 10px 22px; border-radius: 11px; background: rgba(212,175,55,.10); border: 1px solid rgba(212,175,55,.42);
+         color: #e8dfd4; font-size: 22px; font-weight: 800; letter-spacing: 2px; }
+
+  /* marquee just above the stats strip */
+  .ticker {
+    position: absolute; left: 0; right: 0; top: 1712px; height: 50px; display: flex; align-items: center; overflow: hidden;
+    border-top: 1px solid rgba(212,175,55,.3); border-bottom: 1px solid rgba(212,175,55,.3); background: rgba(212,175,55,.05);
+  }
+  .track { display: flex; white-space: nowrap; will-change: transform; animation: roll 26s linear infinite; }
+  .track span { color: #ffd75e; font-size: 24px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; padding: 0 30px; }
+  .track span i { color: #7a6a50; font-style: normal; }
+  @keyframes roll { to { transform: translateX(-50%); } }
+
+  /* ---------------- the camera window frame (outside the mask) ---------------- */
+  .frame {
+    position: absolute; left: 90px; top: 300px; width: 900px; height: 580px; border-radius: 28px;
+    border: 3px solid #e9c766; box-shadow: 0 0 28px rgba(212,175,55,.45), inset 0 0 0 1px rgba(255,255,255,.15);
+    pointer-events: none;
+  }
+  .rail { position: absolute; left: 90px; width: 900px; height: 3px; overflow: hidden; border-radius: 2px; }
+  .rail.t { top: 298px; } .rail.b { top: 879px; }
+  .rail::after {
+    content: ""; position: absolute; top: 0; bottom: 0; width: 220px;
+    background: linear-gradient(90deg, transparent, #fff8dc, transparent);
+    animation: sweep 6.5s ease-in-out infinite; will-change: transform;
+  }
+  .rail.b::after { animation-delay: 3.25s; animation-direction: reverse; }
+  @keyframes sweep { 0% { transform: translateX(-240px); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translateX(900px); opacity: 0; } }
+  .corner { position: absolute; width: 44px; height: 44px; border: 4px solid #ffd75e; animation: cpulse 3.2s ease-in-out infinite; }
+  @keyframes cpulse { 50% { opacity: .45; box-shadow: 0 0 16px rgba(255,215,94,.55); } }
+  .corner.tl { left: 74px;  top: 284px; border-right: 0; border-bottom: 0; border-top-left-radius: 14px; }
+  .corner.tr { left: 962px; top: 284px; border-left: 0;  border-bottom: 0; border-top-right-radius: 14px; }
+  .corner.bl { left: 74px;  top: 852px; border-right: 0; border-top: 0; border-bottom-left-radius: 14px; }
+  .corner.br { left: 962px; top: 852px; border-left: 0;  border-top: 0; border-bottom-right-radius: 14px; }
+  /* a "LIVE" tab on the window */
+  .live { position: absolute; left: 118px; top: 282px; padding: 5px 14px 6px; border-radius: 8px; background: #e0262f; color: #fff;
+          font-size: 17px; font-weight: 900; letter-spacing: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.6); }
+  .live::before { content: "●"; margin-right: 8px; animation: blink 1.3s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+</style>
+</head>
+<body>
+  <div class="art">
+    <div class="base"></div>
+    <div class="glow t"></div>
+    <div class="glow b"></div>
+    <div class="marks t" id="marksT"></div>
+    <div class="marks b" id="marksB"></div>
+    <div class="chev a"></div><div class="chev b"></div>
+    <div class="chev c"></div><div class="chev d"></div>
+    <div class="embers t" id="emberT"></div>
+    <div class="embers b" id="emberB"></div>
+
+    <div class="bot">
+      <div class="row">
+        <img class="crest" id="crest" src="sna-logo.png" alt="">
+        <div class="words">
+          <div class="chan" id="chan">SNA Football</div>
+          <div class="join"><span class="who" id="joinwho">Solo Watchalong</span></div>
+        </div>
+      </div>
+      <div class="handles" id="handles">
+        <span class="tag">YouTube &middot; SNA Football</span>
+        <span class="tag">TikTok &middot; @snafootball</span>
+      </div>
+    </div>
+    <div class="ticker"><div class="track" id="track"></div></div>
+    <div class="grain"></div>
+  </div>
+
+  <div id="win" style="display:none">
+    <div class="frame"></div>
+    <div class="rail t"></div><div class="rail b"></div>
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+    <div class="live" id="live">LIVE</div>
+  </div>
+
+<script>
+/* Wording is editable from the address, because in TikTok LIVE Studio the
+   address is the only thing you can change without opening the file:
+     ?window  transparent camera cut-out with a gold frame (off by default)
+     ?chan=   ?sub=   (empty value hides that element)   ?nolive  ?nocrest
+     ?tags=   pipe separated handle chips
+     ?marks=  pipe separated watermark words
+     ?ticker= pipe separated marquee items               */
+(function () {
+  var Q = new URLSearchParams(location.search);
+  var esc = function (t) { return String(t).replace(/[<>&]/g, function (c) { return { "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]; }); };
+  var set = function (id, key) {
+    if (!Q.has(key)) return;
+    var v = Q.get(key), el = document.getElementById(id); if (!el) return;
+    if (!v) { el.style.display = "none"; return; }
+    el.innerHTML = esc(v);
+  };
+  set("chan", "chan"); set("joinwho", "sub");
+  if (Q.has("nocrest")) document.getElementById("crest").style.display = "none";
+  if (Q.has("window")) { document.querySelector(".art").classList.add("cut"); document.getElementById("win").style.display = ""; }
+  if (Q.has("nolive")) document.getElementById("live").style.display = "none";
+  if (Q.has("tags")) {
+    document.getElementById("handles").innerHTML = Q.get("tags").split("|").filter(Boolean)
+      .map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("");
+  }
+
+  var words = (Q.get("marks") || "SNA FOOTBALL|CHAMPIONS 25 / 26|ARSENAL|SOLO").split("|").filter(Boolean);
+  var html = "";
+  for (var i = 0; i < 60; i++) html += "<span>" + esc(words[i % words.length]) + "</span>";
+  document.getElementById("marksT").innerHTML = html;
+  document.getElementById("marksB").innerHTML = html;
+
+  // confetti, scattered so it never falls in unison
+  var box = document.getElementById("emberT"), out = "", cols = ["g", "w", "r", "g", "w"];
+  for (var j = 0; j < 34; j++) {
+    var left = Math.round(Math.random() * 100), dur = (11 + Math.random() * 10).toFixed(1), delay = (-Math.random() * 21).toFixed(1);
+    out += '<span class="ember ' + cols[j % cols.length] + '" style="left:' + left + '%;animation-duration:' + dur + 's;animation-delay:' + delay + 's"></span>';
+  }
+  box.innerHTML = out;
+
+  // marquee, doubled so translateX(-50%) loops seamlessly
+  var items = (Q.get("ticker") || "SNA Football|Solo watchalong|Follow for more|YouTube: SNA Football|TikTok: @snafootball|Last Cards - out now")
+    .split("|").filter(Boolean);
+  var one = items.map(function (t) { return "<span>" + esc(t) + " <i>&bull;</i></span>"; }).join("");
+  document.getElementById("track").innerHTML = one + one;
+})();
+</script>
+</body>
+</html>
