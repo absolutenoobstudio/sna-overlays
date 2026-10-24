@@ -71,6 +71,18 @@
   .net.hot { fill: rgba(255,215,94,.85); }
   #trail { fill: none; stroke: #8fc4ff; stroke-width: .55; stroke-linejoin: round; stroke-linecap: round; opacity: .8; }
   #ball circle:not(.shadow) { animation: breathe 2.2s ease-in-out infinite; }
+  /* the radar sweep - decorative, clearly not the ball, only while play is on */
+  #sweep { transform-box: view-box; transform-origin: 52.5px 34px; animation: spin 8s linear infinite; opacity: 0; transition: opacity .6s; }
+  body.live #sweep { opacity: 1; } body.stopped #sweep { opacity: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* a slow pulse on the last event, so the spot stays "live" */
+  #pulse { fill: none; stroke: #8fc4ff; stroke-width: .5; opacity: 0; }
+  body.live #pulse { animation: pulse 3.2s ease-out infinite; }
+  @keyframes pulse { 0% { r: 1.2; opacity: .7; } 100% { r: 8; opacity: 0; } }
+  body.ars #pulse { stroke: #ff4d55; }
+  body.stopped #ball { opacity: .45; }
+  #status .ago { margin-top: 3px; font-size: 10px; color: #8fa3c4; letter-spacing: 1.5px; font-weight: 800; }
+  body.ars #status .ago { color: #e9b7bb; }
   @keyframes breathe { 50% { r: 1.45; } }
   #ball circle { fill: #fff; stroke: #8fc4ff; stroke-width: .3; filter: drop-shadow(0 0 1.2px rgba(143,196,255,.9)); }
   #ball .shadow { fill: rgba(0,0,0,.4); stroke: none; }
@@ -185,7 +197,13 @@
         <!-- corner arcs -->
         <path class="line" d="M0 1 A1 1 0 0 0 1 0"/><path class="line" d="M104 0 A1 1 0 0 0 105 1"/>
         <path class="line" d="M105 67 A1 1 0 0 0 104 68"/><path class="line" d="M1 68 A1 1 0 0 0 0 67"/>
+        <clipPath id="pitchClip"><rect x="0" y="0" width="105" height="68"/></clipPath>
+        <linearGradient id="sweepGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity=".22"/>
+        </linearGradient>
+        <g clip-path="url(#pitchClip)"><path id="sweep" d="M52.5 34 L52.5 -60 A94 94 0 0 1 99.5 -47.4 Z" fill="url(#sweepGrad)"/></g>
         <polyline id="trail" points=""/>
+        <circle id="pulse" cx="52.5" cy="34" r="1"/>
         <circle id="ping" class="ping" cx="52.5" cy="34" r="1"/>
         <g id="ball" transform="translate(52.5 34)">
           <ellipse class="shadow" cx=".5" cy=".9" rx="1.5" ry=".7"/>
@@ -217,15 +235,20 @@
    its zone ("defensive half", "right wing"), and corners, offsides, cards and
    subs name the team - so each line is turned into a place on the pitch and
    the ball is animated there with a chip saying what happened. Between events
-   the ball waits where play last was. The ball position is therefore where
-   the last event happened, not live tracking of the actual ball; ESPN has no
-   per-second positions and there is no honest way to invent them. */
+   the ball WAITS where play last was: ESPN has no per-second positions, and
+   inventing passes between events showed play going on through an injury
+   stoppage on stream. So nothing moves unless ESPN says it did. Stoppages
+   ("Delay in match because of an injury ...") are shown as stoppages. What
+   keeps the picture alive between events is honest: a radar sweep, a pulse
+   on the last event, and a counter of how long ago it was. The modelled
+   between-event flow still exists behind ?flow for anyone who wants it. */
 
 const Q = new URLSearchParams(location.search);
 const TEAM = Q.get("team") || "359";                 // who to follow (359 = Arsenal)
 const RIVAL_MODE = Q.has("rival");                   // or: whichever big-six rival is on
 const FORCE_ID = Q.get("id");                        // or: one specific fixture
 const REPLAY = parseInt(Q.get("replay") || "1", 10); // events to act out on first load
+const FLOW = Q.has("flow");                          // modelled ball movement between events (off: honest mode)
 const RIVALS = ["360", "364", "363", "382", "367"];
 const LEAGUES = ["eng.1", "uefa.champions", "uefa.europa", "eng.fa", "eng.league_cup"];
 
@@ -369,7 +392,14 @@ function classify(text) {
     return { side, xy: null, label: red ? "RED CARD" : "YELLOW CARD", cls: red ? "card-r" : "card-y", kind: "card" };
   }
   if (/^Substitution,/.test(t)) { const side = whichTeam(t); return { side, xy: [52.5, 68.5], label: "SUBSTITUTION", cls: "sub", kind: "sub" }; }
-  if (/^Delay in match|^Delay over|VAR|video review/i.test(t)) return { side: null, xy: null, label: /over/.test(t) ? "PLAY RESUMES" : "VAR CHECK", cls: "foul", kind: "note" };
+  if (/^Delay in match/.test(t)) {
+    const side = whichTeam(t);
+    const who = (/injury (.+?) \(/.exec(t) || [])[1] || "";
+    const why = /injur/i.test(t) ? "Injury" + (who ? " · " + who : "") : /VAR|video/i.test(t) ? "VAR check" : "Stoppage";
+    return { side, xy: null, label: "STOPPAGE", cls: "foul", kind: "stop", why };
+  }
+  if (/^Delay over/.test(t)) return { side: null, xy: null, label: "PLAY RESUMES", cls: "sub", kind: "resume" };
+  if (/VAR|video review/i.test(t)) return { side: null, xy: null, label: "VAR CHECK", cls: "foul", kind: "stop", why: "VAR check" };
   return null;
 }
 
@@ -390,6 +420,8 @@ let poss = "home";                 // who has it (flipped by fouls, goals, turno
 let holdUntil = 0;                 // after a real event the ball waits here
 let nextPick = 0, nextTurnover = 0;
 let flowing = false;               // only while the match is live
+let stopped = false;               // ESPN said play is stopped (injury, VAR)
+let lastEventAt = 0;               // for the "xx ago" counter
 let possPct = { home: 50, away: 50 };
 const trail = [];
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -452,11 +484,22 @@ function frame(now) {
   $("ball").setAttribute("transform", `translate(${ballAt[0].toFixed(2)} ${ballAt[1].toFixed(2)})`);
 }
 requestAnimationFrame(frame);
+setInterval(() => {
+  if (!lastEventAt || !document.body.classList.contains("live")) return;
+  const el = $("status"); if (!el.firstChild) return;
+  const sec = Math.round((performance.now() - lastEventAt) / 1000);
+  const txt = sec < 60 ? sec + "s ago" : Math.floor(sec / 60) + "m " + (sec % 60) + "s ago";
+  let ago = el.querySelector(".ago");
+  if (!ago) { ago = document.createElement("div"); ago.className = "ago"; el.appendChild(ago); }
+  ago.textContent = txt;
+}, 1000);
 // The persistent centre line: who has the ball and how close to goal, read
 // off the last event. "Dangerous attack" here means the last event was in
 // the final third - inferred from the commentary, not from a scout feed.
 function setStatus(e, xy) {
   const el = $("status");
+  if (e.kind === "stop") { el.innerHTML = `<div class="tm">Stoppage</div><div class="st">${esc(e.why || "")}</div>`; el.classList.remove("hot"); return; }
+  if (e.kind === "resume") { el.innerHTML = `<div class="tm">Play resumes</div>`; el.classList.remove("hot"); return; }
   if (!e.side) { el.innerHTML = `<div class="tm">${esc(e.label)}</div>`; el.classList.remove("hot"); return; }
   const side = (e.kind === "foul" || e.kind === "offside" || e.kind === "card") ? other(e.side) : e.side;   // play goes to the other side
   const ax = side === "home" ? xy[0] : 105 - xy[0];                                                          // how far up the pitch, for that side
@@ -486,10 +529,14 @@ function act(e) {
   const now = performance.now();
   holdUntil = now + (e.kind === "goal" ? 7000 : e.kind === "kickoff" || e.kind === "whistle" ? 2500 : 4000);
   nextPick = holdUntil + 500; nextTurnover = holdUntil + 6000;
-  if (e.side) poss = (e.kind === "foul" || e.kind === "offside" || e.kind === "card" || e.kind === "goal") ? other(e.side) : e.side;
+  if (e.kind === "stop") stopped = true; else if (e.kind === "resume") stopped = false;
+  document.body.classList.toggle("stopped", stopped);
+  lastEventAt = now;
+  if (e.side && e.kind !== "stop") poss = (e.kind === "foul" || e.kind === "offside" || e.kind === "card" || e.kind === "goal") ? other(e.side) : e.side;
   if (e.kind === "goal" || e.kind === "kickoff") { target = [52.5, 34]; holdUntil = now + (e.kind === "goal" ? 7000 : 1500); }
   setStatus(e, xy);
 
+  const pulse = $("pulse"); pulse.setAttribute("cx", xy[0]); pulse.setAttribute("cy", xy[1]);
   const ping = $("ping");
   ping.setAttribute("cx", xy[0]); ping.setAttribute("cy", xy[1]);
   ping.className.baseVal = "ping " + (e.kind === "goal" ? "goal" : "");
@@ -589,8 +636,9 @@ async function tick() {
 
   const state = m.ev.status?.type?.state, live = state === "in";
   const halftime = m.ev.status?.type?.name === "STATUS_HALFTIME";
-  flowing = live && !halftime;
-  if (!flowing) { target = [52.5, 34]; }
+  flowing = FLOW && live && !halftime && !stopped;
+  document.body.classList.toggle("live", live && !halftime);
+  if (!live || halftime) { target = [52.5, 34]; }        // centre spot before kick-off and during the breaks
   const onBreak = halftime || state === "post";
   document.body.classList.toggle("break", onBreak);
   $("score").textContent = state === "pre" ? "v" : `${home.score ?? 0} - ${away.score ?? 0}`;
@@ -622,7 +670,7 @@ async function tick() {
   // refresh the match object so the score and clock keep up
   if (live) { try { const f = await findMatch(); if (f) m = f; } catch (e) {} }
   $("card").classList.add("show");
-  setTimeout(tick, live ? 10000 : 60000);
+  setTimeout(tick, live ? 6000 : 60000);
 }
 tick();
 </script>
