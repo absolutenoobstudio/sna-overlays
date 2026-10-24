@@ -89,7 +89,8 @@ async function tick() {
     const g = d?.general ?? {}, st = d?.header?.status ?? {};
     const home = g.homeTeam?.name ?? m.home?.name ?? "", away = g.awayTeam?.name ?? m.away?.name ?? "";
     const url = d?.content?.superlive?.superLiveUrl;
-    const live = st.started && !st.finished;
+    const started = g.started ?? st.started, finished = g.finished ?? st.finished;
+    const live = started && !finished;
     if (live && url) {
       const full = url + "&dark=true&hl=en-GB";
       if (full !== loadedUrl) { $("w").src = full; loadedUrl = full; }
