@@ -76,7 +76,7 @@
 </head>
 <body>
   <div class="bar" id="bar">
-    <div class="tag"><div class="t1">HATE</div><div class="t2">Watch</div></div>
+    <div class="tag" id="tag"><div class="t1">HATE</div><div class="t2">Watch</div></div>
     <div class="mid">
       <div class="side"><img id="rLogo" alt=""><span class="ab" id="rAb">—</span></div>
       <div class="sc" id="score">0 - 0</div>
@@ -100,6 +100,15 @@ const Q = new URLSearchParams(location.search);
 const FORCE_ID = Q.get("id");                 // optional: pin one club
 const DATES = Q.get("testdate");
 const COMPACT = Q.has("compact");
+// ?chill - just watching, not hate-watching: no HATE WATCH tag, neutral mood
+// line, no red/green bar. ?tag=Watchalong puts a custom label where the tag was.
+const CHILL = Q.has("chill");
+const TAG = Q.get("tag");
+(function () {
+  const tag = document.getElementById("tag");
+  if (TAG) { const w = TAG.trim().split(/\s+/); tag.children[0].textContent = w[0]; tag.children[1].textContent = w.slice(1).join(" "); }
+  else if (CHILL || TAG === "") tag.style.display = "none";
+})();
 if (COMPACT) document.addEventListener("DOMContentLoaded", () => document.body.classList.add("compact"));
 
 async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
@@ -147,6 +156,12 @@ function matchClock(st) {
 
 function moodFor(state, rs, fs) {
   if (state === "pre") return ["neutral", "Kick-off pending"];
+  if (CHILL) {
+    const r = $("rAb").textContent || "They", f = $("fAb").textContent || "the other lot";
+    if (state === "post") return ["neutral", rs === fs ? "Full time · draw" : `Full time · ${rs > fs ? r : f} win`];
+    if (rs === fs) return ["neutral", "All square"];
+    return ["neutral", `${rs > fs ? r : f} leading`];
+  }
   if (rs < fs)  return ["good", state === "post" ? "They lost. Beautiful." : "They're losing"];
   if (rs > fs)  return ["bad",  state === "post" ? "They won. Grim." : "They're winning"];
   return ["neutral", state === "post" ? "A draw. We'll take it." : "All square"];
