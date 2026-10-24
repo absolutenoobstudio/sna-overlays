@@ -41,7 +41,8 @@
   .net { fill: rgba(143,196,255,.12); stroke: rgba(143,196,255,.5); stroke-width: .4; }
   .net.hot { fill: rgba(255,215,94,.85); }
   #trail { fill: none; stroke: #8fc4ff; stroke-width: .55; stroke-linejoin: round; stroke-linecap: round; opacity: .8; }
-  #ball { transition: transform .9s cubic-bezier(.3,.7,.3,1); }
+  #ball circle:not(.shadow) { animation: breathe 2.2s ease-in-out infinite; }
+  @keyframes breathe { 50% { r: 1.45; } }
   #ball circle { fill: #fff; stroke: #8fc4ff; stroke-width: .3; filter: drop-shadow(0 0 1.2px rgba(143,196,255,.9)); }
   #ball .shadow { fill: rgba(0,0,0,.4); stroke: none; }
   /* crest + a number at each end, like the radar's xG chips (ESPN has no xG, so: shots on target) */
@@ -324,8 +325,81 @@ function classify(text) {
 }
 
 /* ---------- acting an event out on the pitch ---------- */
-let ballAt = [52.5, 34];
+/* ---------- the flow between events ----------
+   ESPN only posts a line every minute or so, and a ball that sits still for a
+   minute reads as broken. Bookmaker radars keep the ball moving between their
+   events too, so: the ball drifts continuously, biased towards the goal of the
+   side in possession, and possession changes hands at a rate set by the REAL
+   possession split (70% possession = keeps the ball ~70% of the time). A real
+   event always snaps the ball to where it actually happened and holds it
+   there a few seconds; the drift resumes from that spot. The centre status is
+   read off the ball's zone, so "Dangerous attack" means the ball is in the
+   final third - still inferred, and the chips only ever show real events. */
+let ballAt = [52.5, 34];           // where the ball is drawn
+let target = [52.5, 34];           // where it is heading
+let poss = "home";                 // who has it (flipped by fouls, goals, turnovers)
+let holdUntil = 0;                 // after a real event the ball waits here
+let nextPick = 0, nextTurnover = 0;
+let flowing = false;               // only while the match is live
+let possPct = { home: 50, away: 50 };
 const trail = [];
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function attackX(side, x) { return side === "home" ? x : 105 - x; }   // metres up the pitch for that side
+
+// pick the next place the ball drifts to: usually forward for the side in
+// possession, sometimes sideways or back, never into the box by drift alone
+function pickTarget(now) {
+  const ax = attackX(poss, ballAt[0]);
+  const r = Math.random();
+  let dx = r < .55 ? 6 + Math.random() * 10 : r < .8 ? (Math.random() - .5) * 8 : -(4 + Math.random() * 9);
+  if (ax > 80) dx = Math.min(dx, 2);                                  // hovering, not driving through the keeper
+  if (ax < 12) dx = Math.abs(dx);                                     // out from the back
+  const nx = clamp(ax + dx, 8, 86);
+  const ny = clamp(ballAt[1] + (Math.random() - .5) * 22, 6, 62);
+  target = [attackX(poss, nx), ny];
+  trail.push(target.slice()); while (trail.length > 7) trail.shift();
+  $("trail").setAttribute("points", trail.map(q => q[0].toFixed(1) + "," + q[1].toFixed(1)).join(" "));
+  nextPick = now + 1800 + Math.random() * 2200;
+  statusFromBall();
+}
+
+// possession changes hands at the real split: each check, the side with 70%
+// keeps it with probability .7
+function maybeTurnover(now) {
+  nextTurnover = now + 9000 + Math.random() * 12000;
+  const keep = (possPct[poss] || 50) / 100;
+  if (Math.random() < keep) return;
+  poss = other(poss);
+  const ax = 25 + Math.random() * 25;                                 // won back in their own half
+  target = [attackX(poss, ax), clamp(ballAt[1] + (Math.random() - .5) * 20, 8, 60)];
+  nextPick = now + 2500;
+  statusFromBall();
+}
+
+function statusFromBall() {
+  if (!teams) return;
+  const el = $("status"), ax = attackX(poss, target[0]);
+  const st = ax > 85 ? "Dangerous attack" : ax > 60 ? "Attack" : "In possession";
+  el.innerHTML = `<div class="tm">${esc(teams[poss].name)}</div><div class="st">${st}</div>`;
+  el.classList.toggle("hot", ax > 85);
+}
+
+let lastFrame = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(50, now - lastFrame); lastFrame = now;
+  if (flowing && now > holdUntil) {
+    if (now > nextPick) pickTarget(now);
+    if (now > nextTurnover) maybeTurnover(now);
+  }
+  // ease towards the target - quick after a real event, lazy while drifting
+  const k = (now < holdUntil ? 0.012 : 0.0028) * dt;
+  ballAt[0] += (target[0] - ballAt[0]) * k;
+  ballAt[1] += (target[1] - ballAt[1]) * k;
+  $("ball").setAttribute("transform", `translate(${ballAt[0].toFixed(2)} ${ballAt[1].toFixed(2)})`);
+}
+requestAnimationFrame(frame);
 // The persistent centre line: who has the ball and how close to goal, read
 // off the last event. "Dangerous attack" here means the last event was in
 // the final third - inferred from the commentary, not from a scout feed.
@@ -353,11 +427,15 @@ let labelTimer = null;
 function act(e) {
   let xy = e.xy;
   if (xy && e.side === "away") xy = [105 - xy[0], 68 - xy[1]];
-  if (!xy) xy = ballAt;                            // cards, VAR: stay where play is
-  trail.push(xy); while (trail.length > 7) trail.shift();
+  if (!xy) xy = ballAt.slice();                    // cards, VAR: stay where play is
+  trail.push(xy.slice()); while (trail.length > 7) trail.shift();
   $("trail").setAttribute("points", trail.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" "));
-  ballAt = xy;
-  $("ball").setAttribute("transform", `translate(${xy[0]} ${xy[1]})`);
+  target = xy.slice();
+  const now = performance.now();
+  holdUntil = now + (e.kind === "goal" ? 7000 : e.kind === "kickoff" || e.kind === "whistle" ? 2500 : 4000);
+  nextPick = holdUntil + 500; nextTurnover = holdUntil + 6000;
+  if (e.side) poss = (e.kind === "foul" || e.kind === "offside" || e.kind === "card" || e.kind === "goal") ? other(e.side) : e.side;
+  if (e.kind === "goal" || e.kind === "kickoff") { target = [52.5, 34]; holdUntil = now + (e.kind === "goal" ? 7000 : 1500); }
   setStatus(e, xy);
 
   const ping = $("ping");
@@ -402,6 +480,7 @@ function statOf(t, name) {
 function renderStats(tH, tA) {
   const pH = parseFloat(statOf(tH, "possessionPct")), pA = parseFloat(statOf(tA, "possessionPct"));
   if (isFinite(pH) && isFinite(pA) && pH + pA > 0) {
+    possPct = { home: pH, away: pA };
     $("pH").textContent = Math.round(pH) + "%"; $("pA").textContent = Math.round(pA) + "%";
     $("barH").style.width = (pH / (pH + pA) * 100) + "%";
   }
@@ -430,6 +509,8 @@ async function tick() {
   $("abH").textContent = teams.home.ab; $("abA").textContent = teams.away.ab;
 
   const state = m.ev.status?.type?.state, live = state === "in";
+  flowing = live && m.ev.status?.type?.name !== "STATUS_HALFTIME";
+  if (!flowing) { target = [52.5, 34]; }
   $("score").textContent = state === "pre" ? "v" : `${home.score ?? 0} - ${away.score ?? 0}`;
   $("clock").textContent = state === "pre"
       ? new Date(m.ev.date).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })
@@ -459,7 +540,7 @@ async function tick() {
   // refresh the match object so the score and clock keep up
   if (live) { try { const f = await findMatch(); if (f) m = f; } catch (e) {} }
   $("card").classList.add("show");
-  setTimeout(tick, live ? 15000 : 60000);
+  setTimeout(tick, live ? 10000 : 60000);
 }
 tick();
 </script>
