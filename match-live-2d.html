@@ -18,6 +18,35 @@
   }
   #card.show { opacity: 1; }
 
+  /* ---- Arsenal theme (body.ars) - red card, navy pitch, white and gold accents ---- */
+  body.ars #card { background: linear-gradient(180deg, rgba(58,6,12,.95), rgba(26,4,9,.96)); border-color: rgba(239,1,7,.55); box-shadow: 0 10px 40px rgba(0,0,0,.6), 0 0 60px rgba(239,1,7,.18); }
+  body.ars #clock { color: #e9b7bb; }
+  body.ars .grass-a { fill: #0a1a45; } body.ars .grass-b { fill: #0e2258; }
+  body.ars .line { stroke: rgba(255,255,255,.5); } body.ars .spot { fill: rgba(255,255,255,.6); }
+  body.ars .net { fill: rgba(255,255,255,.1); stroke: rgba(255,255,255,.45); }
+  body.ars #trail { stroke: #ff4d55; }
+  body.ars #ball circle:not(.shadow) { stroke: #ef0107; filter: drop-shadow(0 0 1.4px rgba(255,120,128,.95)); }
+  body.ars .ping { stroke: #fff; } body.ars .ping.goal { stroke: #ef0107; }
+  body.ars #label { background: #fff; color: #9a0005; }
+  body.ars #label.goal { background: #ef0107; color: #fff; }
+  body.ars #label.sub { background: #e9b7bb; color: #3a060c; }
+  body.ars #label.foul { background: #d9c7c9; color: #3a060c; }
+  body.ars #status .tm.ars { color: #ff4d55; }
+  body.ars #status.hot .st { color: #e6c35a; }
+  body.ars .end { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.18); }
+  body.ars .end.ars { background: rgba(239,1,7,.16); border-color: rgba(239,1,7,.6); }
+  body.ars .end b { color: #fff; } body.ars .end.ars b { color: #ff4d55; } body.ars .end span { color: #e9b7bb; }
+  body.ars .poss .bar { background: rgba(255,255,255,.18); }
+  body.ars .poss .bar i { background: linear-gradient(90deg, #c8c8c8, #f2f2f2); }       /* home share, neutral */
+  body.ars .poss.arsHome .bar i { background: linear-gradient(90deg, #b30006, #ef0107); } /* Arsenal at home: red fill */
+  body.ars .poss.arsAway .bar { background: linear-gradient(90deg, #b30006, #ef0107); }   /* Arsenal away: red track behind */
+  body.ars .poss .t { color: #e9b7bb; }
+  body.ars .stat { background: rgba(255,255,255,.05); border-color: rgba(239,1,7,.3); }
+  body.ars .stat span { color: #e9b7bb; }
+  body.ars .stat b.hot { color: #fff; } body.ars .stat b.hot.ars { color: #ff4d55; }   /* red = Arsenal leads, white = they do */
+  body.ars .kicker { color: #ff4d55; }
+  body.ars #flash { text-shadow: 0 0 30px rgba(239,1,7,.95), 0 4px 20px rgba(0,0,0,.9); }
+
   /* header: crests, score, clock */
   .head { display: flex; align-items: center; justify-content: space-between; }
   .team { display: flex; align-items: center; gap: 10px; min-width: 200px; }
@@ -381,7 +410,7 @@ function statusFromBall() {
   if (!teams) return;
   const el = $("status"), ax = attackX(poss, target[0]);
   const st = ax > 85 ? "Dangerous attack" : ax > 60 ? "Attack" : "In possession";
-  el.innerHTML = `<div class="tm">${esc(teams[poss].name)}</div><div class="st">${st}</div>`;
+  el.innerHTML = `<div class="tm ${teams[poss].ars ? "ars" : ""}">${esc(teams[poss].name)}</div><div class="st">${st}</div>`;
   el.classList.toggle("hot", ax > 85);
 }
 
@@ -410,7 +439,7 @@ function setStatus(e, xy) {
   const ax = side === "home" ? xy[0] : 105 - xy[0];                                                          // how far up the pitch, for that side
   const st = e.kind === "goal" ? "Goal!" : e.kind === "sub" ? "Substitution" : e.kind === "card" ? "Free kick" :
              ax > 85 ? "Dangerous attack" : ax > 60 ? "Attack" : "In possession";
-  el.innerHTML = `<div class="tm">${esc(teams[side].name)}</div><div class="st">${st}</div>`;
+  el.innerHTML = `<div class="tm ${teams[side].ars ? "ars" : ""}">${esc(teams[side].name)}</div><div class="st">${st}</div>`;
   el.classList.toggle("hot", ax > 85 || e.kind === "goal");
 }
 function pitchToPx([x, y]) {                       // metres -> px inside .field
@@ -490,7 +519,8 @@ function renderStats(tH, tA) {
   $("stats").innerHTML = rows.map(([k, lab]) => {
     const a = statOf(tH, k) || "0", b = statOf(tA, k) || "0";
     const na = parseFloat(a), nb = parseFloat(b);
-    return `<div class="stat"><b class="${na > nb ? "hot" : ""}">${esc(a)}</b><span>${lab}</span><b class="${nb > na ? "hot" : ""}">${esc(b)}</b></div>`;
+    const hH = na > nb ? "hot" + (teams.home.ars ? " ars" : "") : "", hA = nb > na ? "hot" + (teams.away.ars ? " ars" : "") : "";
+    return `<div class="stat"><b class="${hH}">${esc(a)}</b><span>${lab}</span><b class="${hA}">${esc(b)}</b></div>`;
   }).join("");
 }
 
@@ -505,6 +535,13 @@ async function tick() {
   const names = c => [c.team?.displayName, c.team?.shortDisplayName, c.team?.name, c.team?.location].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b.length - a.length);
   teams = { home: { id: String(home.team?.id), names: names(home), ab: home.team?.abbreviation || "", name: home.team?.shortDisplayName || home.team?.displayName || "" },
             away: { id: String(away.team?.id), names: names(away), ab: away.team?.abbreviation || "", name: away.team?.shortDisplayName || away.team?.displayName || "" } };
+  teams.home.ars = teams.home.id === "359"; teams.away.ars = teams.away.id === "359";
+  const arsIn = teams.home.ars || teams.away.ars;
+  document.body.classList.toggle("ars", arsIn);
+  document.querySelector(".end.h").classList.toggle("ars", teams.home.ars);
+  document.querySelector(".end.a").classList.toggle("ars", teams.away.ars);
+  const pb = document.querySelector(".poss");
+  pb.classList.toggle("arsHome", teams.home.ars); pb.classList.toggle("arsAway", teams.away.ars);
   $("logoH").src = $("endLogoH").src = home.team?.logo || ""; $("logoA").src = $("endLogoA").src = away.team?.logo || "";
   $("abH").textContent = teams.home.ab; $("abA").textContent = teams.away.ab;
 
