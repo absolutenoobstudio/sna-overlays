@@ -56,6 +56,14 @@
 const Q = new URLSearchParams(location.search);
 const TEAM = (Q.get("team") || "9825").replace(/\D/g, "");
 const FORCE = (Q.get("match") || "").replace(/\D/g, "");
+// ?sr=71945340 (or sr:match:71945340): load the frame for that Sportradar match
+// id directly, no FotMob lookup at all
+const SR = (Q.get("sr") || "").replace(/\D/g, "");
+if (SR) {
+  document.getElementById("w").src = `https://pub.fotmob.com/prod/news/api/law?srmatchid=sr:match:${SR}&version=v4w&dark=true&hl=en-GB`;
+  document.body.classList.add("on");
+  document.getElementById("sub").textContent = "sr:match:" + SR;
+}
 if (Q.has("neutral")) document.body.classList.add("neutral");
 if (Q.has("nohead")) document.body.classList.add("nohead");
 const $ = id => document.getElementById(id);
