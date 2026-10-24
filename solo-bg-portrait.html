@@ -14,7 +14,7 @@
        camera    300-880    put the camera here, on top (add ?window to the address
                             for a transparent cut-out with a gold frame instead)
        radar     940-1466   (the 1000x526 radar box)
-       branding  1500-1680  crest, name, handles
+       branding  1500-1680  crest, name, handles (?sub= adds a line under the name)
        stats     1767+      (the 1080x153 stats box)
      Everything animates with transform or opacity only: this runs for a whole
      stream as a browser source, or is rendered to a video loop for TikTok. */
@@ -151,7 +151,7 @@
         <img class="crest" id="crest" src="sna-logo.png" alt="">
         <div class="words">
           <div class="chan" id="chan">SNA Football</div>
-          <div class="join"><span class="who" id="joinwho">Solo Watchalong</span></div>
+          <div class="join" id="joinwho" style="display:none"><span class="who">Solo Watchalong</span></div>
         </div>
       </div>
       <div class="handles" id="handles">
@@ -175,7 +175,7 @@
 /* Wording is editable from the address, because in TikTok LIVE Studio the
    address is the only thing you can change without opening the file:
      ?window  transparent camera cut-out with a gold frame (off by default)
-     ?chan=   ?sub=   (empty value hides that element)   ?nolive  ?nocrest
+     ?chan=   ?sub=   (?sub= adds a line under the name)    ?nolive  ?nocrest
      ?tags=   pipe separated handle chips
      ?marks=  pipe separated watermark words
      ?ticker= pipe separated marquee items               */
@@ -188,7 +188,8 @@
     if (!v) { el.style.display = "none"; return; }
     el.innerHTML = esc(v);
   };
-  set("chan", "chan"); set("joinwho", "sub");
+  set("chan", "chan");
+  if (Q.get("sub")) { var jw = document.getElementById("joinwho"); jw.style.display = ""; jw.querySelector(".who").innerHTML = esc(Q.get("sub")); }
   if (Q.has("nocrest")) document.getElementById("crest").style.display = "none";
   if (Q.has("window")) { document.querySelector(".art").classList.add("cut"); document.getElementById("win").style.display = ""; }
   if (Q.has("nolive")) document.getElementById("live").style.display = "none";
@@ -212,7 +213,7 @@
   box.innerHTML = out;
 
   // marquee, doubled so translateX(-50%) loops seamlessly
-  var items = (Q.get("ticker") || "SNA Football|Solo watchalong|Follow for more|YouTube: SNA Football|TikTok: @snafootball|Last Cards - out now")
+  var items = (Q.get("ticker") || "SNA Football|Follow for more|YouTube: SNA Football|TikTok: @snafootball|Last Cards - out now")
     .split("|").filter(Boolean);
   var one = items.map(function (t) { return "<span>" + esc(t) + " <i>&bull;</i></span>"; }).join("");
   document.getElementById("track").innerHTML = one + one;
