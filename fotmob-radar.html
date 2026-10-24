@@ -45,6 +45,7 @@
   <div class="head"><div class="t"><i>Live</i> radar</div><div class="s" id="sub">finding the match…</div></div>
   <div id="frame"><iframe id="w" referrerpolicy="no-referrer-when-downgrade" allow="autoplay"></iframe><div id="msg">…</div></div>
 </div>
+<script src="fotmob-live.js"></script>
 <script>
 /* Usage:
      ?team=9825     FotMob team id to follow (default 9825 = Arsenal)
@@ -88,8 +89,39 @@ async function pickMatch() {
 }
 
 let current = null, loadedUrl = "";
+
+/* Where the Sportradar id comes from, in order:
+   1. window.FOTMOB_LIVE  - fotmob-live.js next to this page, written by
+                            fotmob-live-helper.mjs (Streamlabs, local file)
+   2. fotmob-live.json    - the same, pushed to the hosted copy (TikTok Studio)
+   3. FotMob's API         - works from some browsers, blocked in most */
+async function fromHelper() {
+  let s = window.FOTMOB_LIVE || null;
+  if (!s) { try { s = await (await fetch("fotmob-live.json?t=" + Date.now(), { cache: "no-store" })).json(); } catch (e) { s = null; } }
+  if (!s || (FORCE && s.matchId !== FORCE)) return false;
+  if (!FORCE && s.team && s.team !== TEAM) return false;                          // the helper was watching another team
+  const fresh = Date.now() - new Date(s.updated).getTime() < 6 * 3600 * 1000;     // ignore a stale file from a past match day
+  if (!fresh) return false;
+  const live = s.started && !s.finished;
+  if (live && s.sr) {
+    const full = `https://pub.fotmob.com/prod/news/api/law?srmatchid=sr:match:${s.sr}&version=v4w&dark=true&hl=en-GB`;
+    if (full !== loadedUrl) { $("w").src = full; loadedUrl = full; }
+    document.body.classList.add("on");
+    $("sub").textContent = `${s.home} v ${s.away} · live`;
+  } else {
+    document.body.classList.remove("on"); loadedUrl = ""; $("w").src = "about:blank";
+    $("msg").innerHTML = s.finished ? `${esc(s.home)} v ${esc(s.away)}<small>full time</small>`
+      : live ? `${esc(s.home)} v ${esc(s.away)}<small>live · waiting for the radar id</small>`
+      : `${esc(s.home)} v ${esc(s.away)}<small>kick-off ${s.kickoff ? ukDay(s.kickoff) + " " + ukTime(s.kickoff) : ""} · radar starts at kick-off</small>`;
+    $("sub").textContent = s.finished ? "full time" : live ? "live" : "pre-match";
+  }
+  return true;
+}
+
 async function tick() {
   let delay = 60000;
+  if (SR) return;                                                 // direct mode, nothing to look up
+  if (await fromHelper()) { return setTimeout(tick, 15000); }    // the helper refreshes every 30s
   try {
     const m = await pickMatch();
     if (!m) { $("msg").innerHTML = "No match found"; $("sub").textContent = ""; return setTimeout(tick, delay); }
