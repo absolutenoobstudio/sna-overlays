@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Live Radar</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  /* FotMob's live-action frame: Sportradar's Live Match Tracker as FotMob
+     licenses it. The frame is embeddable and runs on the Sportradar match id,
+     and FotMob's own API hands that out per match, so this page finds the
+     team's live match by itself.
+
+     Honest note for whoever reads this later: this rides on FotMob's licence.
+     It works while they leave the frame open; nothing here can stop them
+     closing it, so the SportScore tracker and match-live-2d.html stay as the
+     fallbacks. */
+  #card {
+    position: absolute; inset: 0; border-radius: 16px; overflow: hidden;
+    background: linear-gradient(180deg, rgba(58,6,12,.95), rgba(26,4,9,.96));
+    border: 1px solid rgba(239,1,7,.55); box-shadow: 0 10px 40px rgba(0,0,0,.6), 0 0 60px rgba(239,1,7,.18);
+    display: flex; flex-direction: column;
+  }
+  body.neutral #card { background: linear-gradient(180deg, rgba(12,22,40,.94), rgba(8,14,27,.94)); border-color: rgba(93,160,255,.35); box-shadow: 0 10px 40px rgba(0,0,0,.55); }
+  .head { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px 6px; }
+  .head .t { color: #fff; font-size: 15px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; }
+  .head .t i { font-style: normal; color: #ff4d55; } body.neutral .head .t i { color: #8fc4ff; }
+  .head .s { color: #e9b7bb; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+  body.neutral .head .s { color: #8fa3c4; }
+  body.nohead .head { display: none; }
+  #frame { flex: 1; position: relative; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: none; background: transparent; }
+  body.on iframe { display: block; }
+  #msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center;
+         color: #fff; font-weight: 900; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; padding: 20px; }
+  #msg small { font-size: 12px; color: #e9b7bb; letter-spacing: 2px; font-weight: 800; }
+  body.neutral #msg small { color: #8fa3c4; }
+  body.on #msg { display: none; }
+</style>
+</head>
+<body>
+<div id="card">
+  <div class="head"><div class="t"><i>Live</i> radar</div><div class="s" id="sub">finding the match…</div></div>
+  <div id="frame"><iframe id="w" referrerpolicy="no-referrer-when-downgrade" allow="autoplay"></iframe><div id="msg">…</div></div>
+</div>
+<script>
+/* Usage:
+     ?team=9825     FotMob team id to follow (default 9825 = Arsenal)
+     ?match=5795485 one specific FotMob match id instead
+     ?neutral       blue card instead of Arsenal colours
+     ?nohead        no title bar (just the radar)
+   The radar only exists once the match is live; before kick-off this shows
+   the fixture and kick-off time and keeps checking every minute. */
+const Q = new URLSearchParams(location.search);
+const TEAM = (Q.get("team") || "9825").replace(/\D/g, "");
+const FORCE = (Q.get("match") || "").replace(/\D/g, "");
+if (Q.has("neutral")) document.body.classList.add("neutral");
+if (Q.has("nohead")) document.body.classList.add("nohead");
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+const ukTime = d => new Date(d).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
+const ukDay = d => new Date(d).toLocaleDateString("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" });
+
+// live match first, else the next one, else the last one if it ended in the past 3 hours
+async function pickMatch() {
+  if (FORCE) return { id: FORCE };
+  const j = await jget(`https://www.fotmob.com/api/data/teams?id=${TEAM}`);
+  const fx = j?.fixtures?.allFixtures?.fixtures ?? [];
+  const now = Date.now();
+  const t = f => new Date(f.status?.utcTime).getTime();
+  const live = fx.find(f => f.status?.started && !f.status?.finished);
+  if (live) return live;
+  const next = fx.filter(f => !f.status?.started).sort((a, b) => t(a) - t(b))[0];
+  const last = fx.filter(f => f.status?.finished).sort((a, b) => t(b) - t(a))[0];
+  if (last && now - t(last) < 3 * 3600 * 1000) return last;
+  return next || last || null;
+}
+
+let current = null, loadedUrl = "";
+async function tick() {
+  let delay = 60000;
+  try {
+    const m = await pickMatch();
+    if (!m) { $("msg").innerHTML = "No match found"; $("sub").textContent = ""; return setTimeout(tick, delay); }
+    const d = await jget(`https://www.fotmob.com/api/data/matchDetails?matchId=${m.id}`);
+    const g = d?.general ?? {}, st = d?.header?.status ?? {};
+    const home = g.homeTeam?.name ?? m.home?.name ?? "", away = g.awayTeam?.name ?? m.away?.name ?? "";
+    const url = d?.content?.superlive?.superLiveUrl;
+    const live = st.started && !st.finished;
+    if (live && url) {
+      const full = url + "&dark=true&hl=en-GB";
+      if (full !== loadedUrl) { $("w").src = full; loadedUrl = full; }
+      document.body.classList.add("on");
+      $("sub").textContent = `${home} v ${away} · live`;
+      delay = 30000;                                   // just keeping the status fresh; the frame updates itself
+    } else {
+      document.body.classList.remove("on"); loadedUrl = ""; $("w").src = "about:blank";
+      const when = g.matchTimeUTCDate || m.status?.utcTime;
+      $("msg").innerHTML = st.finished
+        ? `${esc(home)} ${esc(st.scoreStr || "")} ${esc(away)}<small>full time</small>`
+        : `${esc(home)} v ${esc(away)}<small>kick-off ${when ? ukDay(when) + " " + ukTime(when) : ""} · radar starts at kick-off</small>`;
+      $("sub").textContent = st.finished ? "full time" : "pre-match";
+      delay = st.finished ? 120000 : 60000;
+    }
+  } catch (e) {
+    $("msg").innerHTML = "Radar unavailable<small>FotMob did not answer · fallback: sportscore-tracker.html</small>";
+    $("sub").textContent = "";
+  }
+  setTimeout(tick, delay);
+}
+tick();
+</script>
+</body>
+</html>
