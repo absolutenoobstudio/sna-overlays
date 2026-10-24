@@ -122,6 +122,25 @@
   #centre small { font-size: 12px; color: #8fc4ff; letter-spacing: 3px; margin-top: 4px; }
   #centre:empty { display: none; }
 
+  /* the break board - replaces the pitch at half time and full time */
+  #board { position: absolute; inset: 0; display: none; flex-direction: column; justify-content: center; gap: 7px; padding: 0 18px; }
+  body.break #board { display: flex; }
+  body.break #pitch, body.break #status, body.break #label, body.break .end, body.break #centre { display: none; }
+  #board .ttl { text-align: center; color: #fff; font-size: 15px; font-weight: 900; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 4px; }
+  #board .ttl i { font-style: normal; color: #8fc4ff; }
+  body.ars #board .ttl i { color: #ff4d55; }
+  .brow { display: grid; grid-template-columns: 54px 1fr 110px 1fr 54px; align-items: center; gap: 8px; }
+  .brow b { color: #fff; font-size: 19px; font-weight: 900; text-align: center; }
+  .brow .lbl { color: #8fa3c4; font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; text-align: center; }
+  body.ars .brow .lbl { color: #e9b7bb; }
+  .brow .bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .brow .bar i { display: block; height: 100%; width: 0; transition: width .9s; background: #5da0ff; }
+  .brow .bar.l i { margin-left: auto; }                       /* home bar fills from the centre outwards */
+  .brow .bar.l i { background: #5da0ff; } .brow .bar.r i { background: #c9d4e6; }
+  body.ars .brow .bar.l i { background: #c9c9c9; } body.ars .brow .bar.r i { background: #c9c9c9; }
+  body.ars .brow .bar.ars i { background: linear-gradient(90deg, #b30006, #ef0107); }
+  .brow b.win { color: #ffd75e; } body.ars .brow b.win { color: #fff; } body.ars .brow b.win.ars { color: #ff4d55; }
+
   /* possession + counts */
   .poss { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 14px; font-weight: 900; }
   .poss .bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(143,196,255,.22); overflow: hidden; }
@@ -176,6 +195,7 @@
       <div id="status"></div>
       <div id="label"></div>
       <div id="centre"></div>
+      <div id="board"></div>
       <div id="flash"></div>
     </div>
 
@@ -381,22 +401,25 @@ function attackX(side, x) { return side === "home" ? x : 105 - x; }   // metres 
 function pickTarget(now) {
   const ax = attackX(poss, ballAt[0]);
   const r = Math.random();
-  let dx = r < .55 ? 6 + Math.random() * 10 : r < .8 ? (Math.random() - .5) * 8 : -(4 + Math.random() * 9);
+  let dx = r < .22 ? 18 + Math.random() * 14                               // a long ball
+         : r < .62 ? 8 + Math.random() * 10                                // carried forward
+         : r < .84 ? (Math.random() - .5) * 14                             // across
+         : -(5 + Math.random() * 10);                                      // back
   if (ax > 80) dx = Math.min(dx, 2);                                  // hovering, not driving through the keeper
   if (ax < 12) dx = Math.abs(dx);                                     // out from the back
   const nx = clamp(ax + dx, 8, 86);
-  const ny = clamp(ballAt[1] + (Math.random() - .5) * 22, 6, 62);
+  const ny = clamp(ballAt[1] + (Math.random() - .5) * 30, 6, 62);
   target = [attackX(poss, nx), ny];
   trail.push(target.slice()); while (trail.length > 7) trail.shift();
   $("trail").setAttribute("points", trail.map(q => q[0].toFixed(1) + "," + q[1].toFixed(1)).join(" "));
-  nextPick = now + 1800 + Math.random() * 2200;
+  nextPick = now + 850 + Math.random() * 900;
   statusFromBall();
 }
 
 // possession changes hands at the real split: each check, the side with 70%
 // keeps it with probability .7
 function maybeTurnover(now) {
-  nextTurnover = now + 9000 + Math.random() * 12000;
+  nextTurnover = now + 5000 + Math.random() * 7000;
   const keep = (possPct[poss] || 50) / 100;
   if (Math.random() < keep) return;
   poss = other(poss);
@@ -423,7 +446,7 @@ function frame(now) {
     if (now > nextTurnover) maybeTurnover(now);
   }
   // ease towards the target - quick after a real event, lazy while drifting
-  const k = (now < holdUntil ? 0.012 : 0.0028) * dt;
+  const k = (now < holdUntil ? 0.012 : 0.0062) * dt;
   ballAt[0] += (target[0] - ballAt[0]) * k;
   ballAt[1] += (target[1] - ballAt[1]) * k;
   $("ball").setAttribute("transform", `translate(${ballAt[0].toFixed(2)} ${ballAt[1].toFixed(2)})`);
@@ -524,6 +547,25 @@ function renderStats(tH, tA) {
   }).join("");
 }
 
+/* ---------- the break board ---------- */
+const BOARD = [["possessionPct", "possession", "%"], ["totalShots", "shots", ""], ["shotsOnTarget", "on target", ""],
+               ["wonCorners", "corners", ""], ["foulsCommitted", "fouls", ""], ["offsides", "offsides", ""],
+               ["yellowCards", "yellow cards", ""], ["saves", "saves", ""]];
+function renderBoard(tH, tA, title) {
+  const rows = BOARD.map(([k, lab, unit]) => {
+    const a = parseFloat(statOf(tH, k)) || 0, b = parseFloat(statOf(tA, k)) || 0, tot = a + b || 1;
+    const bad = k === "foulsCommitted" || k === "yellowCards" || k === "offsides";    // leading these is not winning
+    const wH = !bad && a > b ? "win" + (teams.home.ars ? " ars" : "") : "", wA = !bad && b > a ? "win" + (teams.away.ars ? " ars" : "") : "";
+    const fmt = v => unit === "%" ? Math.round(v) + "%" : String(v);
+    return `<div class="brow"><b class="${wH}">${fmt(a)}</b>
+      <div class="bar l ${teams.home.ars ? "ars" : ""}"><i style="width:${a / tot * 100}%"></i></div>
+      <div class="lbl">${lab}</div>
+      <div class="bar r ${teams.away.ars ? "ars" : ""}"><i style="width:${b / tot * 100}%"></i></div>
+      <b class="${wA}">${fmt(b)}</b></div>`;
+  }).join("");
+  $("board").innerHTML = `<div class="ttl"><i>${esc(title)}</i> &nbsp;·&nbsp; ${esc(teams.home.ab)} ${$("score").textContent} ${esc(teams.away.ab)}</div>${rows}`;
+}
+
 /* ---------- main loop ---------- */
 let m = null, lastSeq = -1, firstLoad = true;
 async function tick() {
@@ -546,8 +588,11 @@ async function tick() {
   $("abH").textContent = teams.home.ab; $("abA").textContent = teams.away.ab;
 
   const state = m.ev.status?.type?.state, live = state === "in";
-  flowing = live && m.ev.status?.type?.name !== "STATUS_HALFTIME";
+  const halftime = m.ev.status?.type?.name === "STATUS_HALFTIME";
+  flowing = live && !halftime;
   if (!flowing) { target = [52.5, 34]; }
+  const onBreak = halftime || state === "post";
+  document.body.classList.toggle("break", onBreak);
   $("score").textContent = state === "pre" ? "v" : `${home.score ?? 0} - ${away.score ?? 0}`;
   $("clock").textContent = state === "pre"
       ? new Date(m.ev.date).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })
@@ -562,7 +607,7 @@ async function tick() {
     const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.lg}/summary?event=${m.ev.id}`);
     const bt = j.boxscore?.teams ?? [];
     const tH = bt.find(t => String(t.team?.id) === teams.home.id), tA = bt.find(t => String(t.team?.id) === teams.away.id);
-    if (tH && tA) renderStats(tH, tA);
+    if (tH && tA) { renderStats(tH, tA); if (onBreak) renderBoard(tH, tA, halftime ? "Half-time" : "Full-time"); }
 
     // commentary arrives newest-first; play what we have not seen, in order
     const lines = (j.commentary ?? []).slice().sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
