@@ -6,43 +6,61 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
 
-  /* SportScore's free live tracker (sportscore.com/embed) - a 3D pitch with
-     possession, pressure timeline, scorers and clock - auto-following the
-     team's live match. Free for editorial / fan use on their terms, which
-     ask that the "Live tracker by sportscore.com" line stays visible: it is
-     inside their widget and is left exactly as served.
+  /* SportScore's free live tracker (sportscore.com/embed): a 3D pitch with the
+     live action (attack, shot, corner, throw-in...), possession, a pressure
+     timeline, scorers and clock, auto-following the team's match. It is
+     TheSports' live match widget served under SportScore's key, free for
+     editorial / fan use on SportScore's terms, which ask that the
+     "Live tracker by sportscore.com" line stays visible.
 
-     The widget lays itself out for a ~480px-wide box and does not grow, so
-     it is rendered at its natural size and scaled up to fill whatever box
-     Streamlabs or TikTok Studio gives it. */
+     The widget lays itself out for a 480px-wide box: 420px tall shows all of
+     it, 360px drops its footer, ~190px is the pitch alone. It does not grow,
+     so it is rendered at 480px and scaled up to fill the box's WIDTH. If the
+     box is too short for the whole widget the bottom is clipped - and because
+     that is where their attribution sits, this page draws its own copy of it
+     over the bottom edge whenever that happens. */
   #wrap { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
   iframe { border: 0; display: block; background: transparent; }
+  #credit {
+    position: absolute; left: 0; right: 0; bottom: 0; display: none; justify-content: center; align-items: center;
+    height: 26px; font-size: 12px; font-weight: 600; color: #c9d4e6; background: rgba(8,12,24,.85); letter-spacing: .5px;
+  }
+  #credit a { color: #8fc4ff; text-decoration: none; margin-left: 5px; }
+  body.clipped #credit { display: flex; }
 </style>
 </head>
 <body>
-<div id="wrap"><iframe id="f" referrerpolicy="no-referrer-when-downgrade" allow="autoplay"></iframe></div>
+<div id="wrap"><iframe id="f" referrerpolicy="no-referrer-when-downgrade" allow="autoplay" scrolling="no"></iframe></div>
+<div id="credit">Live tracker by<a href="https://sportscore.com/football/" target="_blank" rel="noopener">sportscore.com</a></div>
 <script>
 /* Usage:
-     ?team=arsenal      follows that team's live match (default arsenal; use the
-                        team's sportscore.com slug, e.g. manchester-united)
-     ?live              whichever football match is live right now
+     ?team=arsenal        follows that team's live match (default arsenal; use the
+                          team's sportscore.com slug, e.g. manchester-united)
+     ?live                whichever football match is live right now (for testing)
      ?match=home-vs-away  one specific fixture slug from sportscore.com
-     ?theme=light       (default dark)
-     ?w=480             the widget's natural width to render at (default 480) */
+     ?theme=light         (default dark)
+     ?h=420               the widget's natural height to lay out at: 420 = all of
+                          it, 360 = without the footer, 190 = pitch only
+   Box sizes that show the whole widget at 1000 wide: 1000 x 875 (h=420),
+   1000 x 750 (h=360), 1000 x 400 (h=190). */
 const Q = new URLSearchParams(location.search);
 const theme = Q.get("theme") === "light" ? "light" : "dark";
 const base = "https://sportscore.com/embed/tracker/football/";
 const path = Q.has("live") ? "live/" : Q.get("match") ? Q.get("match").replace(/[^a-z0-9-]/gi, "") + "/"
            : "team/" + (Q.get("team") || "arsenal").replace(/[^a-z0-9-]/gi, "") + "/";
-const W = parseInt(Q.get("w") || "480", 10);
+const W = 480, H = Math.max(190, parseInt(Q.get("h") || "420", 10));
 const f = document.getElementById("f");
 f.src = base + path + "?theme=" + theme;
 
 function fit() {
   const s = innerWidth / W;                       // fill the width, keep the widget's own proportions
-  f.width = W; f.height = Math.round(innerHeight / s);
+  f.width = W; f.height = H;
   document.getElementById("wrap").style.transform = `scale(${s})`;
+  // their footer (with the credit) is the bottom ~60px of the 420 layout
+  const shown = innerHeight / s;
+  document.body.classList.toggle("clipped", H >= 400 ? shown < H - 8 : true);
 }
 addEventListener("resize", fit); fit();
 </script>
