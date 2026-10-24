@@ -139,11 +139,11 @@
 /* Live match tracker: running commentary + key stats, straight from ESPN's
    summary feed.
 
-   Deliberately NOT here: the animated pitch with "Dangerous Attack" /
-   "Throw-in" that bookmaker trackers show. That comes from a scout feed - a
-   person at the ground tapping events in - and is a paid B2B product from
-   Sportradar or Statscore. ESPN's `plays` array is empty for soccer, so there
-   is no honest way to draw it. Better to show real data well than fake it. */
+   The animated "football radar" pitch lives in match-live-2d.html. It is
+   driven off this same commentary feed: every attempt names where it was
+   taken from and every free kick its zone, which is enough to place events
+   on a pitch. ESPN's `plays` array is still empty for soccer, so the radar
+   shows where the LAST EVENT happened, not a live ball position. */
 
 const Q = new URLSearchParams(location.search);
 const TEAM = Q.get("team") || "359";                 // who to follow (359 = Arsenal)

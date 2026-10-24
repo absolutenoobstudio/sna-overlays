@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>2D Match Live Tracker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; }
+
+  /* Fixed 760x470 design, scaled to whatever box Streamlabs gives it */
+  #stage { position: absolute; left: 0; top: 0; width: 760px; height: 470px; transform-origin: 0 0; }
+  #card {
+    position: absolute; inset: 0; border-radius: 16px; padding: 14px 18px 12px;
+    background: linear-gradient(180deg, rgba(12,22,40,.94), rgba(8,14,27,.94));
+    border: 1px solid rgba(93,160,255,.35); box-shadow: 0 10px 40px rgba(0,0,0,.55);
+    display: flex; flex-direction: column; gap: 8px; opacity: 0; transition: opacity .6s;
+  }
+  #card.show { opacity: 1; }
+
+  /* header: crests, score, clock */
+  .head { display: flex; align-items: center; justify-content: space-between; }
+  .team { display: flex; align-items: center; gap: 10px; min-width: 200px; }
+  .team.a { flex-direction: row-reverse; }
+  .team img { width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
+  .team .ab { color: #fff; font-size: 30px; font-weight: 900; letter-spacing: 1px; }
+  .mid { display: flex; flex-direction: column; align-items: center; }
+  #score { color: #fff; font-size: 38px; font-weight: 900; line-height: 1; letter-spacing: 2px; }
+  #clock { margin-top: 3px; color: #8fa3c4; font-size: 13px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+  #clock.live { color: #ff5a6a; }
+  #clock.live::before { content: "●"; margin-right: 6px; animation: blink 1.2s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  .kicker { color: #8fc4ff; font-size: 11px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; text-align: center; }
+
+  /* the pitch */
+  .field { position: relative; flex: 1; min-height: 0; }
+  svg { width: 100%; height: 100%; display: block; }
+  .grass-a { fill: #10173f; } .grass-b { fill: #161f52; }
+  .line { fill: none; stroke: rgba(143,170,255,.55); stroke-width: .45; }
+  .spot { fill: rgba(143,170,255,.7); }
+  .net { fill: rgba(143,196,255,.12); stroke: rgba(143,196,255,.5); stroke-width: .4; }
+  .net.hot { fill: rgba(255,215,94,.85); }
+  #trail { fill: none; stroke: #8fc4ff; stroke-width: .55; stroke-linejoin: round; stroke-linecap: round; opacity: .8; }
+  #ball { transition: transform .9s cubic-bezier(.3,.7,.3,1); }
+  #ball circle { fill: #fff; stroke: #8fc4ff; stroke-width: .3; filter: drop-shadow(0 0 1.2px rgba(143,196,255,.9)); }
+  #ball .shadow { fill: rgba(0,0,0,.4); stroke: none; }
+  /* crest + a number at each end, like the radar's xG chips (ESPN has no xG, so: shots on target) */
+  .end { position: absolute; top: 50%; transform: translateY(-50%); width: 58px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+         padding: 10px 6px; border-radius: 10px; background: rgba(143,196,255,.08); border: 1px solid rgba(93,160,255,.25); }
+  .end.h { left: 0; } .end.a { right: 0; }
+  .end img { width: 34px; height: 34px; object-fit: contain; }
+  .end b { color: #8fc4ff; font-size: 22px; font-weight: 900; line-height: 1; }
+  .end span { color: #8fa3c4; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+  /* centre status, like "Chelsea - Attaque dangereuse" */
+  #status { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;
+            color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.9); transition: opacity .4s; }
+  #status .tm { font-size: 17px; font-weight: 900; letter-spacing: 1px; }
+  #status .st { font-size: 12px; color: #c9d4e6; font-weight: 700; letter-spacing: 1px; margin-top: 2px; }
+  #status.hot .st { color: #ffd75e; }
+  #status:empty { display: none; }
+  .ping { fill: none; stroke: #ffd75e; stroke-width: .7; opacity: 0; }
+  .ping.go { animation: ping 1.3s ease-out forwards; }
+  @keyframes ping { 0% { r: 1; opacity: .95; } 100% { r: 11; opacity: 0; } }
+  .ping.goal.go { stroke: #ff5a6a; animation: ping 1.6s ease-out forwards, pingagain 1.6s .5s ease-out forwards; }
+  @keyframes pingagain { 0% { r: 1; opacity: .9; } 100% { r: 16; opacity: 0; } }
+
+  /* the event chip that sits next to the ball */
+  #label {
+    position: absolute; transform: translate(-50%, -140%); white-space: nowrap; pointer-events: none;
+    padding: 5px 11px; border-radius: 8px; font-size: 13px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #0a0806; background: #ffd75e; box-shadow: 0 4px 14px rgba(0,0,0,.5); opacity: 0; transition: opacity .35s, left .9s, top .9s;
+  }
+  #label.show { opacity: 1; }
+  #label.goal { background: #ff5a6a; color: #fff; }
+  #label.card-y { background: #ffd75e; } #label.card-r { background: #e0262f; color: #fff; }
+  #label.sub { background: #8fc4ff; }
+  #label.foul { background: #c9d4e6; }
+  #label .who { opacity: .75; font-weight: 800; margin-left: 6px; }
+
+  /* big moments */
+  #flash {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;
+    font-size: 64px; font-weight: 900; letter-spacing: 8px; color: #fff; text-transform: uppercase;
+    text-shadow: 0 0 30px rgba(255,90,106,.9), 0 4px 20px rgba(0,0,0,.9); opacity: 0;
+  }
+  #flash.go { animation: flash 2.8s ease-out forwards; }
+  @keyframes flash { 0% { opacity: 0; transform: scale(.6); } 12% { opacity: 1; transform: scale(1.08); } 20% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+  #centre {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none;
+    color: #fff; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; font-size: 26px; text-shadow: 0 3px 14px rgba(0,0,0,.9);
+  }
+  #centre small { font-size: 12px; color: #8fc4ff; letter-spacing: 3px; margin-top: 4px; }
+  #centre:empty { display: none; }
+
+  /* possession + counts */
+  .poss { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 14px; font-weight: 900; }
+  .poss .bar { flex: 1; height: 8px; border-radius: 4px; background: rgba(143,196,255,.22); overflow: hidden; }
+  .poss .bar i { display: block; height: 100%; width: 50%; background: linear-gradient(90deg, #5da0ff, #8fc4ff); transition: width 1s; }
+  .poss .t { color: #8fa3c4; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; font-weight: 800; }
+  .stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .stat { display: flex; align-items: center; justify-content: space-between; padding: 4px 9px; border-radius: 7px; background: rgba(143,196,255,.08); border: 1px solid rgba(93,160,255,.2); }
+  .stat b { color: #fff; font-size: 15px; font-weight: 900; min-width: 14px; text-align: center; }
+  .stat span { color: #8fa3c4; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+  .stat b.hot { color: #ffd75e; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="card">
+    <div class="head">
+      <div class="team h"><img id="logoH" alt=""><span class="ab" id="abH"></span></div>
+      <div class="mid"><div id="score">–</div><div id="clock">…</div></div>
+      <div class="team a"><img id="logoA" alt=""><span class="ab" id="abA"></span></div>
+    </div>
+
+    <div class="field">
+      <div class="end h"><img id="endLogoH" alt=""><b id="endH">0</b><span>on target</span></div>
+      <div class="end a"><img id="endLogoA" alt=""><b id="endA">0</b><span>on target</span></div>
+      <svg id="pitch" viewBox="-3.5 -1.5 112 71" preserveAspectRatio="xMidYMid meet" style="padding: 0 66px">
+        <g id="grass"></g>
+        <!-- goals -->
+        <rect id="netH" class="net" x="-2.4" y="30.34" width="2.4" height="7.32"/>
+        <rect id="netA" class="net" x="105" y="30.34" width="2.4" height="7.32"/>
+        <!-- markings (metres, 105 x 68) -->
+        <rect class="line" x="0" y="0" width="105" height="68"/>
+        <line class="line" x1="52.5" y1="0" x2="52.5" y2="68"/>
+        <circle class="line" cx="52.5" cy="34" r="9.15"/>
+        <circle class="spot" cx="52.5" cy="34" r=".5"/>
+        <rect class="line" x="0" y="13.84" width="16.5" height="40.32"/>
+        <rect class="line" x="88.5" y="13.84" width="16.5" height="40.32"/>
+        <rect class="line" x="0" y="24.84" width="5.5" height="18.32"/>
+        <rect class="line" x="99.5" y="24.84" width="5.5" height="18.32"/>
+        <circle class="spot" cx="11" cy="34" r=".5"/><circle class="spot" cx="94" cy="34" r=".5"/>
+        <path class="line" d="M16.5 26.6 A9.15 9.15 0 0 1 16.5 41.4"/>
+        <path class="line" d="M88.5 26.6 A9.15 9.15 0 0 0 88.5 41.4"/>
+        <!-- corner arcs -->
+        <path class="line" d="M0 1 A1 1 0 0 0 1 0"/><path class="line" d="M104 0 A1 1 0 0 0 105 1"/>
+        <path class="line" d="M105 67 A1 1 0 0 0 104 68"/><path class="line" d="M1 68 A1 1 0 0 0 0 67"/>
+        <polyline id="trail" points=""/>
+        <circle id="ping" class="ping" cx="52.5" cy="34" r="1"/>
+        <g id="ball" transform="translate(52.5 34)">
+          <ellipse class="shadow" cx=".5" cy=".9" rx="1.5" ry=".7"/>
+          <circle cx="0" cy="0" r="1.25"/>
+        </g>
+      </svg>
+      <div id="status"></div>
+      <div id="label"></div>
+      <div id="centre"></div>
+      <div id="flash"></div>
+    </div>
+
+    <div class="poss">
+      <span id="pH">–</span><span class="t">poss</span>
+      <div class="bar"><i id="barH"></i></div>
+      <span class="t">poss</span><span id="pA">–</span>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+</div>
+
+<script src="live-core.js"></script>
+<script>
+/* 2D MATCH LIVE TRACKER
+   The animated pitch that bookmaker sites show, driven by ESPN's commentary
+   feed. Every attempt in that feed says where it was taken from ("left side
+   of the box", "outside the box", "very close range"), every free kick names
+   its zone ("defensive half", "right wing"), and corners, offsides, cards and
+   subs name the team - so each line is turned into a place on the pitch and
+   the ball is animated there with a chip saying what happened. Between events
+   the ball waits where play last was. The ball position is therefore where
+   the last event happened, not live tracking of the actual ball; ESPN has no
+   per-second positions and there is no honest way to invent them. */
+
+const Q = new URLSearchParams(location.search);
+const TEAM = Q.get("team") || "359";                 // who to follow (359 = Arsenal)
+const RIVAL_MODE = Q.has("rival");                   // or: whichever big-six rival is on
+const FORCE_ID = Q.get("id");                        // or: one specific fixture
+const REPLAY = parseInt(Q.get("replay") || "1", 10); // events to act out on first load
+const RIVALS = ["360", "364", "363", "382", "367"];
+const LEAGUES = ["eng.1", "uefa.champions", "uefa.europa", "eng.fa", "eng.league_cup"];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+async function jget(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); const j = await r.json(); return window.LiveCore ? LiveCore.fixCodes(j) : j; }
+
+/* ---------- fit the 760x470 design to the box ---------- */
+// ?noscore drops the score header for scenes that already carry a scorebug,
+// and the design shrinks to 760x400 so the box it is given is all pitch
+const NOSCORE = Q.has("noscore"), DESIGN_H = NOSCORE ? 400 : 470;
+if (NOSCORE) { document.querySelector(".head").style.display = "none"; $("stage").style.height = DESIGN_H + "px"; }
+function fit() {
+  const s = Math.min(innerWidth / 760, innerHeight / DESIGN_H);
+  const st = $("stage").style;
+  st.transform = `scale(${s})`;
+  st.left = ((innerWidth - 760 * s) / 2) + "px";
+  st.top = ((innerHeight - DESIGN_H * s) / 2) + "px";
+}
+addEventListener("resize", fit); fit();
+
+/* ---------- pitch stripes ---------- */
+(function () {
+  let g = "";
+  for (let i = 0; i < 10; i++) g += `<rect class="${i % 2 ? "grass-b" : "grass-a"}" x="${i * 10.5}" y="0" width="10.5" height="68"/>`;
+  $("grass").innerHTML = g;
+})();
+
+/* ---------- which match ---------- */
+function follows(ev) {
+  const ids = (ev.competitions?.[0]?.competitors ?? []).map(c => String(c.team?.id));
+  if (FORCE_ID) return String(ev.id) === FORCE_ID;
+  return RIVAL_MODE ? ids.some(i => RIVALS.includes(i)) : ids.includes(TEAM);
+}
+function pickMatch(found) {
+  if (!found.length) return null;
+  const now = Date.now(), FRESH = 36 * 3600 * 1000;
+  const st = m => m.ev.status?.type?.state, t = m => new Date(m.ev.date).getTime();
+  const live = found.filter(m => st(m) === "in");
+  const pre = found.filter(m => st(m) === "pre").sort((a, b) => t(a) - t(b));
+  const post = found.filter(m => st(m) === "post" && (FORCE_ID || now - t(m) < FRESH)).sort((a, b) => t(b) - t(a));
+  for (const g of [live, pre, post]) if (g.length) return g[0];
+  return null;
+}
+async function findMatch() {
+  const found = [];
+  const ids = FORCE_ID ? [] : RIVAL_MODE ? RIVALS : [TEAM];
+  for (const lg of LEAGUES) {
+    try {
+      const j = await (window.LiveCore && !FORCE_ID ? LiveCore.teamScoreboard(lg, ids, null)
+                                                   : jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${lg}/scoreboard`));
+      for (const ev of j.events ?? []) if (follows(ev)) found.push({ lg, ev, comp: ev.competitions[0] });
+    } catch (e) {}
+  }
+  return pickMatch(found);
+}
+
+/* ---------- reading a commentary line ----------
+   Positions are in metres for a team attacking left-to-right towards x=105;
+   away-team events are mirrored. "left"/"right" are from the attacker's view,
+   which on a left-to-right attack puts "left" at the top of the picture. */
+const ZONES = [
+  [/very close range/,                      [102, 34]],
+  [/left side of the six yard box/,         [100.5, 28]],
+  [/right side of the six yard box/,        [100.5, 40]],
+  [/six yard box/,                          [100.5, 34]],
+  [/difficult angle on the left/,           [100, 9]],
+  [/difficult angle on the right/,          [100, 59]],
+  [/difficult angle/,                       [100, 12]],
+  [/left side of the box/,                  [93, 22]],
+  [/right side of the box/,                 [93, 46]],
+  [/centre of the box/,                     [94, 34]],
+  [/long range/,                            [70, 34]],
+  [/outside the box/,                       [80, 34]],
+  [/from the left/,                         [90, 18]],
+  [/from the right/,                        [90, 50]],
+  [/header/,                                [97, 34]],
+];
+function zone(text, dflt) {
+  for (const [re, xy] of ZONES) if (re.test(text)) return xy.slice();
+  return dflt.slice();
+}
+function jitter([x, y], ax = 2, ay = 4) { return [x + (Math.random() - .5) * ax, y + (Math.random() - .5) * ay]; }
+
+let teams = null;    // { home:{id,names:[..],ab}, away:{...} }
+function whichTeam(text) {
+  // "(Arsenal)" after a player, or "Corner, Arsenal." / "Offside, Arsenal."
+  for (const side of ["home", "away"]) {
+    for (const n of teams[side].names) if (text.includes(n)) return side;
+  }
+  return null;
+}
+function other(side) { return side === "home" ? "away" : "home"; }
+
+// -> { side, xy, label, cls, kind } or null for lines that are not events
+function classify(text) {
+  const t = text.trim();
+  let m;
+  if (/^Lineups|^First Half begins|^Second Half begins|^Match ends|^First Half ends|^Second Half ends|^Fourth official/.test(t)) {
+    const kind = /begins/.test(t) ? "kickoff" : /ends/.test(t) ? "whistle" : null;
+    return kind ? { side: null, xy: [52.5, 34], label: /Match ends/.test(t) ? "FULL TIME" : /First Half ends/.test(t) ? "HALF TIME" : "KICK-OFF", cls: "", kind } : null;
+  }
+  if ((m = /^Own Goal by .*?, (.+?)\./.exec(t))) {          // credited to the other side
+    const scorer = whichTeam(m[1]);
+    return { side: other(scorer), xy: jitter([101, 34]), label: "OWN GOAL", cls: "goal", kind: "goal" };
+  }
+  if (/^Goal!/.test(t)) {
+    const side = whichTeam(t.replace(/^Goal!.*?\d+\.\s*/, "")) || whichTeam(t);
+    return { side, xy: jitter(zone(t, [95, 34])), label: "GOAL!", cls: "goal", kind: "goal" };
+  }
+  if (/^Penalty saved/.test(t) || /^Penalty missed/.test(t)) {
+    const side = whichTeam(t);
+    return { side, xy: [94, 34], label: /saved/.test(t) ? "PENALTY SAVED" : "PENALTY MISSED", cls: "", kind: "shot" };
+  }
+  if (/^Penalty /.test(t)) { const side = whichTeam(t); return { side, xy: [94, 34], label: "PENALTY!", cls: "goal", kind: "shot" }; }
+  if (/^Attempt (missed|blocked|saved)/.test(t)) {
+    const side = whichTeam(t);
+    const lab = /saved/.test(t) ? "SHOT SAVED" : /blocked/.test(t) ? "SHOT BLOCKED" : "SHOT WIDE";
+    return { side, xy: jitter(zone(t, [85, 34])), label: lab, cls: "", kind: "shot" };
+  }
+  if (/hits the (left|right) post|hits the (crossbar|bar)/.test(t)) {
+    const side = whichTeam(t);
+    return { side, xy: jitter(zone(t, [92, 34])), label: /post/.test(t) ? "OFF THE POST!" : "OFF THE BAR!", cls: "goal", kind: "shot" };
+  }
+  if (/^Corner,/.test(t)) {
+    const side = whichTeam(t);
+    const top = Math.random() < .5;
+    return { side, xy: [104.3, top ? .7 : 67.3], label: "CORNER", cls: "", kind: "corner" };
+  }
+  if (/^Offside,/.test(t)) { const side = whichTeam(t); return { side, xy: jitter([76, 34], 6, 30), label: "OFFSIDE", cls: "foul", kind: "offside" }; }
+  if (/^Hand ball by/.test(t)) { const side = whichTeam(t); return { side, xy: jitter([48, 34], 20, 30), label: "HANDBALL", cls: "foul", kind: "foul" }; }
+  if (/^Foul by/.test(t)) { const side = whichTeam(t); return { side, xy: jitter([48, 34], 20, 30), label: "FOUL", cls: "foul", kind: "foul" }; }
+  if (/wins a free kick/.test(t)) {
+    const side = whichTeam(t);
+    const xy = /defensive half/.test(t) ? [28, 34] : /attacking half/.test(t) ? [72, 34]
+             : /left wing/.test(t) ? [66, 8] : /right wing/.test(t) ? [66, 60] : [55, 34];
+    return { side, xy: jitter(xy, 8, 10), label: "FREE KICK", cls: "", kind: "freekick" };
+  }
+  if (/is shown the (yellow|red) card|second yellow/.test(t)) {
+    const side = whichTeam(t), red = /red card|second yellow/.test(t);
+    return { side, xy: null, label: red ? "RED CARD" : "YELLOW CARD", cls: red ? "card-r" : "card-y", kind: "card" };
+  }
+  if (/^Substitution,/.test(t)) { const side = whichTeam(t); return { side, xy: [52.5, 68.5], label: "SUBSTITUTION", cls: "sub", kind: "sub" }; }
+  if (/^Delay in match|^Delay over|VAR|video review/i.test(t)) return { side: null, xy: null, label: /over/.test(t) ? "PLAY RESUMES" : "VAR CHECK", cls: "foul", kind: "note" };
+  return null;
+}
+
+/* ---------- acting an event out on the pitch ---------- */
+let ballAt = [52.5, 34];
+const trail = [];
+// The persistent centre line: who has the ball and how close to goal, read
+// off the last event. "Dangerous attack" here means the last event was in
+// the final third - inferred from the commentary, not from a scout feed.
+function setStatus(e, xy) {
+  const el = $("status");
+  if (!e.side) { el.innerHTML = `<div class="tm">${esc(e.label)}</div>`; el.classList.remove("hot"); return; }
+  const side = (e.kind === "foul" || e.kind === "offside" || e.kind === "card") ? other(e.side) : e.side;   // play goes to the other side
+  const ax = side === "home" ? xy[0] : 105 - xy[0];                                                          // how far up the pitch, for that side
+  const st = e.kind === "goal" ? "Goal!" : e.kind === "sub" ? "Substitution" : e.kind === "card" ? "Free kick" :
+             ax > 85 ? "Dangerous attack" : ax > 60 ? "Attack" : "In possession";
+  el.innerHTML = `<div class="tm">${esc(teams[side].name)}</div><div class="st">${st}</div>`;
+  el.classList.toggle("hot", ax > 85 || e.kind === "goal");
+}
+function pitchToPx([x, y]) {                       // metres -> px inside .field
+  const svg = $("pitch"), rr = svg.getBoundingClientRect(), f = svg.parentElement.getBoundingClientRect();
+  const sc = rr.width / (svg.offsetWidth || rr.width);         // stage scale: on-screen px per design px
+  const padX = parseFloat(getComputedStyle(svg).paddingLeft) || 0;
+  const r = { left: rr.left + padX * sc, top: rr.top, width: rr.width - 2 * padX * sc, height: rr.height };
+  const vb = svg.viewBox.baseVal;                  // -3.5 -1.5 112 71
+  const s = Math.min(r.width / vb.width, r.height / vb.height);
+  const ox = (r.width - vb.width * s) / 2 + (r.left - f.left), oy = (r.height - vb.height * s) / 2 + (r.top - f.top);
+  return [((x - vb.x) * s + ox) / sc, ((y - vb.y) * s + oy) / sc];
+}
+let labelTimer = null;
+function act(e) {
+  let xy = e.xy;
+  if (xy && e.side === "away") xy = [105 - xy[0], 68 - xy[1]];
+  if (!xy) xy = ballAt;                            // cards, VAR: stay where play is
+  trail.push(xy); while (trail.length > 7) trail.shift();
+  $("trail").setAttribute("points", trail.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" "));
+  ballAt = xy;
+  $("ball").setAttribute("transform", `translate(${xy[0]} ${xy[1]})`);
+  setStatus(e, xy);
+
+  const ping = $("ping");
+  ping.setAttribute("cx", xy[0]); ping.setAttribute("cy", xy[1]);
+  ping.className.baseVal = "ping " + (e.kind === "goal" ? "goal" : "");
+  void ping.getBoundingClientRect(); ping.classList.add("go");
+
+  const ab = e.side ? teams[e.side].ab : "";
+  const lab = $("label");
+  lab.className = e.cls;
+  lab.innerHTML = esc(e.label) + (ab ? `<span class="who">${esc(ab)}</span>` : "");
+  const [px, py] = pitchToPx(xy);
+  lab.style.left = px + "px"; lab.style.top = Math.max(26, py) + "px";
+  lab.classList.add("show");
+  clearTimeout(labelTimer);
+  labelTimer = setTimeout(() => lab.classList.remove("show"), e.kind === "goal" ? 9000 : 6000);
+
+  if (e.kind === "goal") {
+    const net = $(e.side === "home" ? "netA" : "netH");
+    net.classList.add("hot"); setTimeout(() => net.classList.remove("hot"), 2500);
+    const f = $("flash"); f.textContent = e.label === "OWN GOAL" ? "OWN GOAL" : "GOAL!";
+    f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
+  }
+}
+
+/* ---------- playback queue: several new lines in one poll play in order ---------- */
+const queue = [];
+let playing = false;
+function enqueue(events) { queue.push(...events); if (!playing) drain(); }
+function drain() {
+  const e = queue.shift();
+  if (!e) { playing = false; return; }
+  playing = true; act(e);
+  setTimeout(drain, queue.length > 4 ? 700 : 1400);
+}
+
+/* ---------- stats ---------- */
+function statOf(t, name) {
+  const s = (t.statistics ?? []).find(x => x.name === name);
+  return s ? (s.displayValue ?? s.value ?? "") : "";
+}
+function renderStats(tH, tA) {
+  const pH = parseFloat(statOf(tH, "possessionPct")), pA = parseFloat(statOf(tA, "possessionPct"));
+  if (isFinite(pH) && isFinite(pA) && pH + pA > 0) {
+    $("pH").textContent = Math.round(pH) + "%"; $("pA").textContent = Math.round(pA) + "%";
+    $("barH").style.width = (pH / (pH + pA) * 100) + "%";
+  }
+  $("endH").textContent = statOf(tH, "shotsOnTarget") || "0"; $("endA").textContent = statOf(tA, "shotsOnTarget") || "0";
+  const rows = [["totalShots", "shots"], ["shotsOnTarget", "on target"], ["wonCorners", "corners"],
+                ["foulsCommitted", "fouls"], ["yellowCards", "yellow"], ["redCards", "red"]];
+  $("stats").innerHTML = rows.map(([k, lab]) => {
+    const a = statOf(tH, k) || "0", b = statOf(tA, k) || "0";
+    const na = parseFloat(a), nb = parseFloat(b);
+    return `<div class="stat"><b class="${na > nb ? "hot" : ""}">${esc(a)}</b><span>${lab}</span><b class="${nb > na ? "hot" : ""}">${esc(b)}</b></div>`;
+  }).join("");
+}
+
+/* ---------- main loop ---------- */
+let m = null, lastSeq = -1, firstLoad = true;
+async function tick() {
+  if (!m || m.ev.status?.type?.state !== "in") m = await findMatch();
+  if (!m) { $("centre").innerHTML = "No match found<small>nothing scheduled</small>"; $("card").classList.add("show"); return setTimeout(tick, 60000); }
+
+  const cs = m.comp.competitors ?? [];
+  const home = cs.find(c => c.homeAway === "home") || cs[0], away = cs.find(c => c.homeAway === "away") || cs[1];
+  const names = c => [c.team?.displayName, c.team?.shortDisplayName, c.team?.name, c.team?.location].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => b.length - a.length);
+  teams = { home: { id: String(home.team?.id), names: names(home), ab: home.team?.abbreviation || "", name: home.team?.shortDisplayName || home.team?.displayName || "" },
+            away: { id: String(away.team?.id), names: names(away), ab: away.team?.abbreviation || "", name: away.team?.shortDisplayName || away.team?.displayName || "" } };
+  $("logoH").src = $("endLogoH").src = home.team?.logo || ""; $("logoA").src = $("endLogoA").src = away.team?.logo || "";
+  $("abH").textContent = teams.home.ab; $("abA").textContent = teams.away.ab;
+
+  const state = m.ev.status?.type?.state, live = state === "in";
+  $("score").textContent = state === "pre" ? "v" : `${home.score ?? 0} - ${away.score ?? 0}`;
+  $("clock").textContent = state === "pre"
+      ? new Date(m.ev.date).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })
+      : state === "post" ? "Full time"
+      : (m.ev.status?.type?.name === "STATUS_HALFTIME" ? "Half time" : (m.ev.status?.displayClock || "Live"));
+  $("clock").classList.toggle("live", live);
+  $("centre").innerHTML = state === "pre"
+      ? `Kick-off ${new Date(m.ev.date).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" })}<small>${esc(m.comp.venue?.fullName || "")}</small>`
+      : "";
+
+  try {
+    const j = await jget(`https://site.api.espn.com/apis/site/v2/sports/soccer/${m.lg}/summary?event=${m.ev.id}`);
+    const bt = j.boxscore?.teams ?? [];
+    const tH = bt.find(t => String(t.team?.id) === teams.home.id), tA = bt.find(t => String(t.team?.id) === teams.away.id);
+    if (tH && tA) renderStats(tH, tA);
+
+    // commentary arrives newest-first; play what we have not seen, in order
+    const lines = (j.commentary ?? []).slice().sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
+    let fresh = lines.filter(l => (l.sequence ?? 0) > lastSeq);
+    if (firstLoad) fresh = fresh.slice(-REPLAY);     // opening mid-match: do not act out the whole game
+    const events = fresh.map(l => classify(l.text || "")).filter(Boolean);
+    if (lines.length) lastSeq = lines[lines.length - 1].sequence ?? lastSeq;
+    firstLoad = false;
+    enqueue(events);
+  } catch (e) { /* keep the last state on screen */ }
+
+  // refresh the match object so the score and clock keep up
+  if (live) { try { const f = await findMatch(); if (f) m = f; } catch (e) {} }
+  $("card").classList.add("show");
+  setTimeout(tick, live ? 15000 : 60000);
+}
+tick();
+</script>
+</body>
+</html>
