@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Live Match Tracker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+
+  /* SportScore's free live tracker (sportscore.com/embed) - a 3D pitch with
+     possession, pressure timeline, scorers and clock - auto-following the
+     team's live match. Free for editorial / fan use on their terms, which
+     ask that the "Live tracker by sportscore.com" line stays visible: it is
+     inside their widget and is left exactly as served.
+
+     The widget lays itself out for a ~480px-wide box and does not grow, so
+     it is rendered at its natural size and scaled up to fill whatever box
+     Streamlabs or TikTok Studio gives it. */
+  #wrap { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+  iframe { border: 0; display: block; background: transparent; }
+</style>
+</head>
+<body>
+<div id="wrap"><iframe id="f" referrerpolicy="no-referrer-when-downgrade" allow="autoplay"></iframe></div>
+<script>
+/* Usage:
+     ?team=arsenal      follows that team's live match (default arsenal; use the
+                        team's sportscore.com slug, e.g. manchester-united)
+     ?live              whichever football match is live right now
+     ?match=home-vs-away  one specific fixture slug from sportscore.com
+     ?theme=light       (default dark)
+     ?w=480             the widget's natural width to render at (default 480) */
+const Q = new URLSearchParams(location.search);
+const theme = Q.get("theme") === "light" ? "light" : "dark";
+const base = "https://sportscore.com/embed/tracker/football/";
+const path = Q.has("live") ? "live/" : Q.get("match") ? Q.get("match").replace(/[^a-z0-9-]/gi, "") + "/"
+           : "team/" + (Q.get("team") || "arsenal").replace(/[^a-z0-9-]/gi, "") + "/";
+const W = parseInt(Q.get("w") || "480", 10);
+const f = document.getElementById("f");
+f.src = base + path + "?theme=" + theme;
+
+function fit() {
+  const s = innerWidth / W;                       // fill the width, keep the widget's own proportions
+  f.width = W; f.height = Math.round(innerHeight / s);
+  document.getElementById("wrap").style.transform = `scale(${s})`;
+}
+addEventListener("resize", fit); fit();
+</script>
+</body>
+</html>
